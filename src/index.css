@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #121212;
+  color: white;
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Evita que la app se mueva lateralmente en el celular */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Personalizar scrollbar para que sea oscura */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f97316;
+}
