@@ -93,7 +93,7 @@ export default function Admin() {
         else if (tab === 'usuarios') { const { data } = await supabase.from('users').select('*').order('username'); setData(data || []); }
         else if (tab === 'clientes') { const { data } = await supabase.from('customers').select('*').limit(100); setData(data || []); }
         else if (tab === 'productos') { const { data } = await supabase.from('products').select('*').order('name'); setData(data || []); }
-        else if (tab === 'config') {
+        else if (tab === 'config' || tab === 'promo') {
           const { data, error } = await supabase.from('config').select('*');
           setConfigError('');
           if (error) { setConfigError(error.message || 'No se pudo leer config'); return; }
@@ -235,7 +235,22 @@ export default function Admin() {
           {key: 'costo_delivery', numeric_value: Number(config.costo_delivery || 0)},
           {key: 'customer_notice_enabled', text_value: String(!!config.customer_notice_enabled)},
           {key: 'customer_notice_text', text_value: String(config.customer_notice_text || '')},
-      ]; 
+      
+          // === PROMO LANDING (/promo) ===
+          {key: 'promo_active', text_value: String(String(config.promo_active ?? 'true') !== 'false')},
+          {key: 'promo_badge', text_value: String(config.promo_badge || '')},
+          {key: 'promo_headline', text_value: String(config.promo_headline || '')},
+          {key: 'promo_subheadline', text_value: String(config.promo_subheadline || '')},
+          {key: 'promo_body', text_value: String(config.promo_body || '')},
+          {key: 'promo_price_text', text_value: String(config.promo_price_text || '')},
+          {key: 'promo_detail_text', text_value: String(config.promo_detail_text || '')},
+          {key: 'promo_cta_label', text_value: String(config.promo_cta_label || '')},
+          {key: 'promo_cta_code', text_value: String(config.promo_cta_code || '')},
+          {key: 'promo_phone', text_value: String(config.promo_phone || '')},
+          {key: 'promo_wa_number', text_value: String(config.promo_wa_number || '')},
+          {key: 'promo_wa_message', text_value: String(config.promo_wa_message || '')},
+          {key: 'promo_promos', text_value: String(config.promo_promos || '')},
+]; 
       for (const u of updates) await supabase.from('config').upsert(u); 
       logAction(user?.username || 'Admin', 'SAVE_CONFIG', 'Update');
       
@@ -263,7 +278,7 @@ export default function Admin() {
   return (
     <div className="flex flex-col h-full bg-dark text-white p-2 pb-20">
       <div className="flex gap-2 overflow-x-auto pb-2 mb-2 border-b border-gray-800 no-scrollbar shrink-0">
-        {['dash', 'gestion', 'productos', 'usuarios', 'clientes', 'logs', 'config'].map(t => (
+        {['dash', 'gestion', 'productos', 'usuarios', 'clientes', 'logs', 'config', 'promo'].map(t => (
             <button key={t} onClick={() => { setTab(t); setSearchTerm(''); }} className={`px-4 py-2 rounded-lg font-bold capitalize whitespace-nowrap transition-all ${tab === t ? 'bg-orange-600 text-white scale-105' : 'bg-gray-800 text-gray-400'}`}>{t === 'gestion' ? 'Historial' : t}</button>
         ))}
       </div>
@@ -398,6 +413,134 @@ export default function Admin() {
     <b>Config no visible:</b> {configError}
   </div>
 )}
+
+
+        {tab === 'promo' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="text-2xl font-black">Promo (Landing QR)</h2>
+              <div className="flex items-center gap-2">
+                <a href="/promo?ref=carlos" target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-800 text-orange-200 font-bold">Vista previa</a>
+                <button onClick={saveConf} className="px-4 py-2 rounded-xl bg-orange-600 text-white font-black">Guardar</button>
+              </div>
+            </div>
+
+            <div className="bg-card border border-white/10 rounded-2xl p-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className="text-sm">
+                  <div className="font-bold mb-1">Promo activa</div>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, promo_active: (String(config.promo_active ?? 'true') !== 'false') ? 'false' : 'true' })}
+                    className={`w-full px-4 py-3 rounded-xl font-extrabold ${(String(config.promo_active ?? 'true') !== 'false') ? 'bg-emerald-600' : 'bg-gray-700'}`}
+                  >
+                    {(String(config.promo_active ?? 'true') !== 'false') ? 'ACTIVA' : 'INACTIVA'}
+                  </button>
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">Badge</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_badge || ''}
+                    onChange={(e) => setConfig({ ...config, promo_badge: e.target.value })}
+                    placeholder="Publicidad chismosa, promo real." />
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">Título (línea 1)</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_headline || ''}
+                    onChange={(e) => setConfig({ ...config, promo_headline: e.target.value })}
+                    placeholder="Carlos te engaña…" />
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">Título (línea 2)</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_subheadline || ''}
+                    onChange={(e) => setConfig({ ...config, promo_subheadline: e.target.value })}
+                    placeholder="pero con su dieta." />
+                </label>
+
+                <label className="text-sm md:col-span-2">
+                  <div className="font-bold mb-1">Texto principal</div>
+                  <textarea className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3 min-h-[96px]"
+                    value={config.promo_body || ''}
+                    onChange={(e) => setConfig({ ...config, promo_body: e.target.value })}
+                    placeholder="Pizza personal + botellita de chicha por S/10…" />
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">Precio</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_price_text || ''}
+                    onChange={(e) => setConfig({ ...config, promo_price_text: e.target.value })}
+                    placeholder="S/ 10" />
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">Detalle</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_detail_text || ''}
+                    onChange={(e) => setConfig({ ...config, promo_detail_text: e.target.value })}
+                    placeholder="Pizza personal + botellita de chicha (delivery gratis hoy)" />
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">CTA (texto)</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_cta_label || ''}
+                    onChange={(e) => setConfig({ ...config, promo_cta_label: e.target.value })}
+                    placeholder="Pedir ahora" />
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">Código promo (/pedido?promo=)</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_cta_code || ''}
+                    onChange={(e) => setConfig({ ...config, promo_cta_code: e.target.value })}
+                    placeholder="CARLOS10" />
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">Teléfono</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_phone || ''}
+                    onChange={(e) => setConfig({ ...config, promo_phone: e.target.value })}
+                    placeholder="+51989466466" />
+                </label>
+
+                <label className="text-sm">
+                  <div className="font-bold mb-1">WhatsApp</div>
+                  <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+                    value={config.promo_wa_number || ''}
+                    onChange={(e) => setConfig({ ...config, promo_wa_number: e.target.value })}
+                    placeholder="51989466466" />
+                </label>
+
+                <label className="text-sm md:col-span-2">
+                  <div className="font-bold mb-1">Mensaje WhatsApp</div>
+                  <textarea className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3 min-h-[80px]"
+                    value={config.promo_wa_message || ''}
+                    onChange={(e) => setConfig({ ...config, promo_wa_message: e.target.value })}
+                    placeholder="Hola 👋 Quiero la promo CARLOS (S/10: pizza personal + chicha)…" />
+                </label>
+
+                <label className="text-sm md:col-span-2">
+                  <div className="font-bold mb-1">Promos (JSON opcional)</div>
+                  <textarea className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3 min-h-[120px] font-mono text-xs"
+                    value={config.promo_promos || ''}
+                    onChange={(e) => setConfig({ ...config, promo_promos: e.target.value })}
+                    placeholder='[{"tag":"TOP","title":"Promo CARLOS","price":"S/ 10","note":"Pizza personal + chicha","promo":"CARLOS10","bullets":["Delivery gratis hoy"]}]' />
+                </label>
+              </div>
+
+              <div className="mt-3 text-xs text-slate-400">
+                Para que /promo lea esto sin login, ejecuta <span className="font-bold">supabase_sql/10_promo_public_read_policy.sql</span>
+              </div>
+            </div>
+          </div>
+        )}
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><div className="lg:col-span-1 space-y-6"><div className="bg-card p-5 rounded-xl border border-gray-800 shadow-lg"><h3 className="font-bold text-lg mb-4 text-orange-500 flex items-center gap-2 border-b border-gray-800 pb-2"><Store/> Identidad</h3><div className="space-y-4"><div><label className="text-xs text-gray-400 font-bold uppercase">Nombre</label><input className="w-full bg-dark p-3 rounded-lg border border-gray-700" value={config.nombre_tienda || ''} onChange={e => setConfig({...config, nombre_tienda: e.target.value})}/></div><div><label className="text-xs text-gray-400 font-bold uppercase mb-2 block">Logo</label><div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-lg p-4 relative">{config.logo_url ? <div className="relative group"><img src={config.logo_url} alt="Preview" className="h-32 object-contain mb-2"/><button onClick={() => setConfig({...config, logo_url: ''})} className="absolute top-0 right-0 bg-red-600 p-1 rounded-full"><Trash2 size={14}/></button></div> : <div className="text-gray-500 py-4 text-center text-xs flex flex-col items-center"><ImageIcon size={40} className="mb-2 opacity-50"/>Sin logo</div>}<label className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2 px-4 rounded mt-2 flex items-center gap-2"><Upload size={14}/> Subir<input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} /></label></div></div></div></div></div>
                
                <div className="lg:col-span-2 space-y-6">

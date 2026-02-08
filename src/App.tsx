@@ -14,8 +14,10 @@ import Admin from './pages/admin';
 import CustomerOrder from './pages/CustomerOrder';
 import Validation from './pages/Validation';
 import Track from './pages/Track';
+import Promo from './pages/Promo';
 
 import MobileLayout from './components/MobileLayout';
+import AppIdentityLoader from './components/AppIdentityLoader';
 
 const getSmartRedirect = (user: any) => {
   if (!user) return '/login';
@@ -59,6 +61,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <AppIdentityLoader />
         <Routes>
           {/* Inicio siempre en Pedido (Cliente) */}
           <Route path="/" element={<Navigate to="/pedido" replace />} />
@@ -67,6 +70,7 @@ export default function App() {
           <Route path="/pedido" element={<CustomerOrder />} />
           <Route path="/track" element={<Track />} />
           <Route path="/track/:token" element={<Track />} />
+          <Route path="/promo" element={<Promo />} />
 
           {/* Público: Login operador */}
           <Route path="/login" element={<Login />} />

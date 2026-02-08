@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { CartItem, Product, ServiceType } from '../types';
 import { canSendRequest, markSent } from '../lib/rateLimit';
@@ -178,6 +178,11 @@ export default function CustomerOrder() {
 
   return (
     <div className="min-h-screen bg-[#0b0b0d] text-white">
+      <div className="mb-4 rounded-2xl border border-white/10 bg-card p-3 text-sm">
+        <span className="font-bold text-orange-300">🔥 Promo del día:</span>
+        <Link className="ml-2 text-orange-200 underline" to="/promo?ref=menu">Ver promo</Link>
+      </div>
+
       {notice?.trim() ? (
         <div className="mx-auto max-w-6xl px-4 mt-4">
           <div className="p-3 rounded-xl border border-yellow-500/40 bg-yellow-500/10 text-yellow-200 text-sm">
