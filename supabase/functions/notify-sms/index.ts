@@ -16,6 +16,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 type IncomingPayload = {
   to: string;
   order_id: number;
+  request_id?: number;
   status: string;
   service_type?: string;
   estimated_minutes?: number;
@@ -41,35 +42,39 @@ function normalizePhoneE164(phone: string) {
 
 function buildMessage(params: {
   orderId: number;
+  requestId?: number;
   status: string;
   trackingUrl?: string;
   etaMin?: number;
   isPickup?: boolean;
 }) {
-  const { orderId, status, trackingUrl, etaMin, isPickup } = params;
+  const { orderId, requestId, status, trackingUrl, etaMin, isPickup } = params;
+  const solicitudId = requestId ?? orderId;
+  const solicitud = `Solicitud (ID): ${solicitudId}`;
+  const code = requestId ? ` Código: ${requestId.toString(36).toUpperCase()}.` : '';
   const eta = etaMin ? ` ETA aprox: ${etaMin} min.` : '';
   const track = trackingUrl ? `
 Seguimiento: ${trackingUrl}` : '';
 
   switch (status) {
     case 'Pendiente':
-      return `Pedido #${orderId} recibido. En proceso. ${eta}${track}`;
+      return `${solicitud} recibida. En proceso.${code}${eta}${track}`;
     case 'Horno':
-      return `Pedido #${orderId} en preparación. ${eta}${track}`;
+      return `${solicitud} en preparación.${code}${eta}${track}`;
     case 'Listo':
       return isPickup
-        ? `Pedido #${orderId} listo para recojo.${track}`
-        : `Pedido #${orderId} listo. En breve sale a reparto.${track}`;
+        ? `${solicitud} lista para recojo.${code}${track}`
+        : `${solicitud} lista. En breve sale a reparto.${code}${track}`;
     case 'En Transporte':
-      return `Pedido #${orderId} en camino.${track}`;
+      return `${solicitud} en camino.${code}${track}`;
     case 'Entregado':
-      return `Pedido #${orderId} entregado. ¡Gracias!`;
+      return `${solicitud} entregada. ¡Gracias!`;
     case 'Recogido':
-      return `Pedido #${orderId} recogido. ¡Gracias!`;
+      return `${solicitud} recogida. ¡Gracias!`;
     case 'Cancelado':
-      return `Pedido #${orderId} cancelado. Si necesitas ayuda, contáctanos.`;
+      return `${solicitud} cancelada. Si necesitas ayuda, contáctanos.`;
     default:
-      return `Pedido #${orderId} actualizado: ${status}.${track}`;
+      return `${solicitud} actualizada: ${status}.${code}${track}`;
   }
 }
 
@@ -132,11 +137,12 @@ serve(async (req: Request) => {
       return json({ error: 'Missing fields: to, order_id, status' }, 400);
     }
 
-    const appUrl = Deno.env.get('APP_PUBLIC_URL') || '';
+    const appUrl = Deno.env.get('APP_PUBLIC_URL') || 'https://004782.xyz';
     const trackingUrl = payload.tracking_url || (appUrl && payload.public_token ? `${appUrl}/track/${payload.public_token}` : undefined);
 
     const message = buildMessage({
       orderId: payload.order_id,
+    requestId: payload.request_id,
       status: payload.status,
       trackingUrl,
       etaMin: payload.estimated_minutes,

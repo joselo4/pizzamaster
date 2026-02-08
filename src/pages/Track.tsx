@@ -19,6 +19,15 @@ function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
 }
 
+const MAX_TRACK_HOURS = 72;
+function isOlderThanHours(createdAt: string | undefined | null, maxHours: number) {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  const age = (Date.now() - t) / (1000 * 60 * 60);
+  return age > maxHours;
+}
+
 function fromTrackCode(code: string): number | null {
   const c = (code || '').trim();
   if (!c) return null;
@@ -241,6 +250,13 @@ const load = async (opts?: { silent?: boolean }) => {
       if (numericId !== null) {
         const { data: r, error: e1 } = await supabase.from('order_requests').select('*').eq('id', numericId).single();
         if (!e1 && r) {
+          // No mostrar tracking de solicitudes con más de 72 horas
+          if (isOlderThanHours((r as any).created_at, MAX_TRACK_HOURS)) {
+            setRequest(null);
+            setOrder(null);
+            setError('Seguimiento ya no está disponible (máximo 72 horas).');
+            return;
+          }
           setRequest(r);
           const mapped = (r as any).mapped_order_id;
           if (mapped) {
@@ -254,6 +270,13 @@ const load = async (opts?: { silent?: boolean }) => {
       // 3) compat token UUID
       const { data: r2, error: e3 } = await supabase.from('order_requests').select('*').eq('public_token', effective).single();
       if (!e3 && r2) {
+        // No mostrar tracking de solicitudes con más de 72 horas
+        if (isOlderThanHours((r2 as any).created_at, MAX_TRACK_HOURS)) {
+          setRequest(null);
+          setOrder(null);
+          setError('Seguimiento ya no está disponible (máximo 72 horas).');
+          return;
+        }
         setRequest(r2);
         const mapped = (r2 as any).mapped_order_id;
         if (mapped) {

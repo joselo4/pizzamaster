@@ -23,6 +23,8 @@ declare
   endpoint text;
   webhook_secret text;
   body jsonb;
+  req_id bigint;
+  req_token uuid;
 begin
   -- Sólo si cambió el status
   if new.status is distinct from old.status then
@@ -56,13 +58,26 @@ begin
 
     endpoint := project_url || '/functions/v1/notify-sms';
 
+    -- Si este pedido proviene de una Solicitud Web (order_requests), obtenemos su ID y token público
+    begin
+      select id, public_token into req_id, req_token
+      from public.order_requests
+      where mapped_order_id = new.id
+      order by created_at desc
+      limit 1;
+    exception when others then
+      req_id := null;
+      req_token := null;
+    end;
+
     body := jsonb_build_object(
       'order_id', new.id,
+      'request_id', req_id,
       'status', new.status,
       'to', new.client_phone,
       'service_type', new.service_type,
       'estimated_minutes', null,
-      'public_token', null,
+      'public_token', req_token,
       'tracking_url', null
     );
 

@@ -101,6 +101,7 @@ export default function Admin() {
               const c:any={}; 
               data.forEach((r:any) => c[r.key] = (r.text_value ?? r.numeric_value ?? r.num_value ?? r.number_value ?? r.bool_value ?? r.value)); 
               c.show_logo = c.show_logo === 'true'; c.show_notes = c.show_notes !== 'false'; c.show_client = c.show_client !== 'false';
+              c.customer_notice_enabled = String(c.customer_notice_enabled) === 'true';
               setConfig(c);
               try { setExtraSocials(c.extra_socials ? JSON.parse(c.extra_socials) : []); } catch(e) {}
               if (!data || data.length===0) {
@@ -232,6 +233,8 @@ export default function Admin() {
           {key: 'website', text_value: config.website},
           {key: 'extra_socials', text_value: JSON.stringify(extraSocials)},
           {key: 'costo_delivery', numeric_value: Number(config.costo_delivery || 0)},
+          {key: 'customer_notice_enabled', text_value: String(!!config.customer_notice_enabled)},
+          {key: 'customer_notice_text', text_value: String(config.customer_notice_text || '')},
       ]; 
       for (const u of updates) await supabase.from('config').upsert(u); 
       logAction(user?.username || 'Admin', 'SAVE_CONFIG', 'Update');
@@ -484,6 +487,8 @@ export default function Admin() {
 
                  <div className="mt-3 text-xs text-gray-400">Guarda con el botón <span className="text-gray-200">Guardar Configuración</span>.</div>
                </div>
+
+<div className="bg-card p-5 rounded-xl border border-yellow-900/30"><h3 className="font-bold text-lg mb-4 text-yellow-400 border-b border-gray-800 pb-2 flex items-center gap-2"><AlertTriangle/> Aviso para clientes</h3><div className="space-y-3"><label className="flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" checked={!!config.customer_notice_enabled} onChange={e => setConfig({...config, customer_notice_enabled: e.target.checked})} />Activar aviso en la página de pedidos</label><textarea rows={3} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" placeholder="Mensaje visible para el cliente..." value={config.customer_notice_text || ''} onChange={e=>setConfig({...config, customer_notice_text: e.target.value})} /></div></div>
 
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div className="bg-card p-5 rounded-xl border border-gray-800"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2"><Bike/> Costos</h3><div className="flex gap-4"><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Cerca</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_cerca || 0} onChange={e => setConfig({...config, costo_cerca: Number(e.target.value)})}/></div><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Lejos</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_lejos || 0} onChange={e => setConfig({...config, costo_lejos: Number(e.target.value)})}/></div></div></div><div className="bg-card p-5 rounded-xl border border-blue-900/30 relative overflow-hidden group"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2 flex items-center gap-2"><MessageCircle/> Backup Telegram</h3><div className="space-y-3 relative z-10"><input type="password" placeholder="Bot Token" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_token || ''} onChange={e => setConfig({...config, tg_token: e.target.value})}/><input placeholder="Chat ID" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_chat_id || ''} onChange={e => setConfig({...config, tg_chat_id: e.target.value})}/><button onClick={testTelegramBackup} className="text-xs bg-blue-600/20 hover:bg-blue-600 hover:text-white text-blue-400 px-3 py-1 rounded border border-blue-600 transition-all flex items-center gap-2"><Upload size={12}/> Probar Conexión</button></div></div></div><div className="sticky bottom-4 z-50 flex justify-center mt-6"><button onClick={saveConf} className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105"><Save size={24}/> GUARDAR CAMBIOS</button></div><div className="mt-10 pt-10 border-t border-gray-800 text-center opacity-40 hover:opacity-100 transition-opacity"><button onClick={nukeDb} className="text-red-500 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"><AlertTriangle size={12}/> RESETEAR FÁBRICA</button></div>
              </div>

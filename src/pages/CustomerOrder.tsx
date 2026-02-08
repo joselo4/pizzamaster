@@ -34,6 +34,22 @@ export default function CustomerOrder() {
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Aviso para clientes (configurable desde Admin > Config)
+  const [notice, setNotice] = useState<string>('');
+  useEffect(() => {
+    (async () => {
+      try {
+        const cfg: any = await fetchConfigMap();
+        const enabled = String(cfg.customer_notice_enabled) === 'true';
+        const msg = String(cfg.customer_notice_text || '');
+        setNotice(enabled ? msg : '');
+      } catch {
+        // no romper UI
+      }
+    })();
+  }, []);
+
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -162,6 +178,14 @@ export default function CustomerOrder() {
 
   return (
     <div className="min-h-screen bg-[#0b0b0d] text-white">
+      {notice?.trim() ? (
+        <div className="mx-auto max-w-6xl px-4 mt-4">
+          <div className="p-3 rounded-xl border border-yellow-500/40 bg-yellow-500/10 text-yellow-200 text-sm">
+            {notice}
+          </div>
+        </div>
+      ) : null}
+
       <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0b0b0d]/85 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4 py-4">
           <div className="flex items-center gap-3">
