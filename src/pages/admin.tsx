@@ -102,7 +102,13 @@ export default function Admin() {
               data.forEach((r:any) => c[r.key] = (r.text_value ?? r.numeric_value ?? r.num_value ?? r.number_value ?? r.bool_value ?? r.value)); 
               c.show_logo = c.show_logo === 'true'; c.show_notes = c.show_notes !== 'false'; c.show_client = c.show_client !== 'false';
               c.customer_notice_enabled = String(c.customer_notice_enabled) === 'true';
-              setConfig(c);
+              
+// QUIRÚRGICO: compatibilidad con claves antiguas (si existen)
+if (!c.promo_cta_label && c.promo_cta) c.promo_cta_label = c.promo_cta;
+if (!c.promo_detail_text && c.promo_detail) c.promo_detail_text = c.promo_detail;
+if (!c.promo_price_text && (c.promo_price || c.promo_price === 0)) c.promo_price_text = `S/ ${c.promo_price}`;
+if (!c.promo_wa_number && c.promo_whatsapp) c.promo_wa_number = String(c.promo_whatsapp).replace(/\D/g,'');
+setConfig(c);
               try { setExtraSocials(c.extra_socials ? JSON.parse(c.extra_socials) : []); } catch(e) {}
               if (!data || data.length===0) {
                 setConfigError('Config vacío o bloqueado por RLS. Ejecuta supabase_sql/06_rls_policies_hardening.sql y 09_update_config_public_policy.sql en Supabase.');
@@ -286,6 +292,143 @@ export default function Admin() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
         {loadingData && <div className="absolute top-0 left-0 w-full h-1 bg-gray-800"><div className="w-full h-full bg-orange-500 animate-pulse"></div></div>}
 
+{/* QUIRÚRGICO: mostrar errores de Config y estado de carga en Config/Promo */}
+{(tab === 'config' || tab === 'promo') && (
+  <div className="mb-3">
+    {configError && (
+      <div className="mb-2 p-3 rounded-xl border border-red-500/30 bg-red-950/40 text-red-200 text-sm">
+        {configError}
+      </div>
+    )}
+    <div className="p-2 rounded-xl border border-white/10 bg-gray-900/40 text-xs text-gray-300">
+      <span className="font-bold">Debug:</span> tab=<span className="text-orange-300 font-bold">{tab}</span>, 
+      keys_config=<span className="font-bold">{Object.keys(config || {}).length}</span>, 
+      promo_keys=<span className="font-bold">{Object.keys(config || {}).filter(k => k.startsWith('promo_')).length}</span>,
+      build=<span className="font-bold text-emerald-300">INTEGRADO_FIX_v5</span>
+    </div>
+  </div>
+)}
+
+
+{/* PROMO EDITOR (QUIRÚRGICO): se muestra siempre que tab=promo */}
+{tab === 'promo' && (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <h2 className="text-2xl font-black">Promo (Landing QR)</h2>
+        <div className="text-xs text-emerald-300 font-bold">PROMO UI OK</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <a href="/promo?ref=carlos" target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-800 text-orange-200 font-bold">Vista previa</a>
+        <button onClick={saveConf} className="px-4 py-2 rounded-xl bg-orange-600 text-white font-black">Guardar</button>
+      </div>
+    </div>
+
+    <div className="bg-card border border-white/10 rounded-2xl p-4">
+      <div className="grid md:grid-cols-2 gap-4">
+        <label className="text-sm">
+          <div className="font-bold mb-1">Promo activa</div>
+          <button
+            type="button"
+            onClick={() => setConfig({ ...config, promo_active: (String(config.promo_active ?? 'true') !== 'false') ? 'false' : 'true' })}
+            className={`w-full px-4 py-3 rounded-xl font-extrabold ${(String(config.promo_active ?? 'true') !== 'false') ? 'bg-emerald-600' : 'bg-gray-700'}`}
+          >
+            {(String(config.promo_active ?? 'true') !== 'false') ? 'ACTIVA' : 'INACTIVA'}
+          </button>
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">Badge</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_badge || ''}
+            onChange={(e) => setConfig({ ...config, promo_badge: e.target.value })}
+            placeholder="Publicidad chismosa, promo real." />
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">Título (línea 1)</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_headline || ''}
+            onChange={(e) => setConfig({ ...config, promo_headline: e.target.value })}
+            placeholder="Carlos te engaña…" />
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">Título (línea 2)</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_subheadline || ''}
+            onChange={(e) => setConfig({ ...config, promo_subheadline: e.target.value })}
+            placeholder="pero con su dieta." />
+        </label>
+
+        <label className="text-sm md:col-span-2">
+          <div className="font-bold mb-1">Texto principal</div>
+          <textarea className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3 min-h-[96px]"
+            value={config.promo_body || ''}
+            onChange={(e) => setConfig({ ...config, promo_body: e.target.value })}
+            placeholder="Pizza personal + botellita de chicha por S/10…" />
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">Precio (texto)</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_price_text || ''}
+            onChange={(e) => setConfig({ ...config, promo_price_text: e.target.value })}
+            placeholder="S/ 10" />
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">Detalle (texto)</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_detail_text || ''}
+            onChange={(e) => setConfig({ ...config, promo_detail_text: e.target.value })}
+            placeholder="Pizza personal + chicha…" />
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">CTA (botón)</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_cta_label || ''}
+            onChange={(e) => setConfig({ ...config, promo_cta_label: e.target.value })}
+            placeholder="Pedir ahora" />
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">Código promo</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_cta_code || ''}
+            onChange={(e) => setConfig({ ...config, promo_cta_code: e.target.value })}
+            placeholder="CARLOS10" />
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">Teléfono</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_phone || ''}
+            onChange={(e) => setConfig({ ...config, promo_phone: e.target.value })}
+            placeholder="+51..." />
+        </label>
+
+        <label className="text-sm">
+          <div className="font-bold mb-1">WhatsApp (número)</div>
+          <input className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3"
+            value={config.promo_wa_number || ''}
+            onChange={(e) => setConfig({ ...config, promo_wa_number: e.target.value })}
+            placeholder="51999..." />
+        </label>
+
+        <label className="text-sm md:col-span-2">
+          <div className="font-bold mb-1">Mensaje WhatsApp</div>
+          <textarea className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3 min-h-[80px]"
+            value={config.promo_wa_message || ''}
+            onChange={(e) => setConfig({ ...config, promo_wa_message: e.target.value })}
+            placeholder="Hola 👋 Quiero la promo..." />
+        </label>
+
+      </div>
+    </div>
+  </div>
+)}
         {/* Filtros Globales */}
         {(tab === 'dash' || tab === 'gestion' || tab === 'logs') && (
             <div className="flex flex-wrap gap-2 mb-4 bg-card p-3 rounded-lg items-center sticky top-0 z-10 shadow-lg border-b border-gray-800">
