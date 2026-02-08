@@ -30,3 +30,7 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: #f97316;
 }
+
+/* Ocultar scrollbar en barras horizontales (móviles) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

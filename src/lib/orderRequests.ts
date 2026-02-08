@@ -6,7 +6,7 @@ export async function fetchConfigMap() {
   const { data } = await supabase.from('config').select('*');
   const c: Record<string, any> = {};
   (data || []).forEach((r: any) => {
-    c[r.key] = r.text_value ?? r.num_value ?? r.bool_value ?? r.value ?? r;
+    c[r.key] = r.text_value ?? r.numeric_value ?? r.num_value ?? r.number_value ?? r.bool_value ?? r.value ?? r;
   });
   return c;
 }
@@ -21,17 +21,17 @@ export async function createOrderRequest(payload: {
   estimated_total: number;
   delivery_fee: number;
   estimated_minutes?: number;
-  public_token: string;
+  public_token?: string;
 }) {
-  const { data, error } = await supabase
-    .from('order_requests')
-    .insert({ status: 'Nuevo', ...payload })
-    .select('*')
-    .single();
-
+  const { data, error } = await supabase.rpc('rpc_create_order_request_public', {
+    p_payload: payload,
+    p_ip: null
+  });
   if (error) throw error;
-  return data as OrderRequest;
+  if (!data?.ok) throw new Error(data?.message || 'No se pudo crear la solicitud');
+  return data.request as OrderRequest;
 }
+
 
 export async function listPendingRequests() {
   const { data, error } = await supabase

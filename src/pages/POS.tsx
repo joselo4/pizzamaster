@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { type CartItem, type Product } from '../types';
 import { generateTicketPDF } from '../lib/ticket';
 import { Send, Plus, Minus, ShoppingCart, User, Phone, MapPin, FileText, Loader2, Armchair, Printer, CheckCircle, X, Share2, Trash2 } from 'lucide-react';
+import { openSmsComposer } from '../lib/smsDevice';
+import { buildStatusSmsMessage } from '../lib/smsTemplates';
+import { getConfigCache } from '../lib/configCache';
 
 export default function POS() {
   const { user } = useAuth();
@@ -96,6 +99,7 @@ export default function POS() {
             logAction(user!.username, 'TOMA_PEDIDO', `${service} - S/${total}`, data.id);
             setLastOrder(data);
             setShowSuccessModal(true);
+            maybeNotifyClientSms(phone, data.id, service, name);
             setCart([]); setPhone(''); setName(''); setAddr(''); setNotes(''); setPayOnDelivery(false); setTableNum('');
         } else {
             alert("❌ Error: " + error?.message);

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 export default function Admin() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [tab, setTab] = useState('dash');
   const [data, setData] = useState<any[]>([]);
   const [date, setDate] = useState(new Date().toLocaleDateString('en-CA')); 
@@ -28,6 +28,7 @@ export default function Admin() {
   const [editItem, setEditItem] = useState<any>({});
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [config, setConfig] = useState<any>({});
+  const [configError, setConfigError] = useState<string>('');
   const [loadingData, setLoadingData] = useState(false);
   const [stats, setStats] = useState({ total: 0, cash: 0, contra: 0, delivery: 0, local: 0, count: 0 });
   const [topProducts, setTopProducts] = useState<any[]>([]);
@@ -93,20 +94,25 @@ export default function Admin() {
         else if (tab === 'clientes') { const { data } = await supabase.from('customers').select('*').limit(100); setData(data || []); }
         else if (tab === 'productos') { const { data } = await supabase.from('products').select('*').order('name'); setData(data || []); }
         else if (tab === 'config') {
-          const { data } = await supabase.from('config').select('*');
+          const { data, error } = await supabase.from('config').select('*');
+          setConfigError('');
+          if (error) { setConfigError(error.message || 'No se pudo leer config'); return; }
           if (data) { 
               const c:any={}; 
-              data.forEach((r:any) => c[r.key] = r.numeric_value || r.text_value); 
+              data.forEach((r:any) => c[r.key] = (r.text_value ?? r.numeric_value ?? r.num_value ?? r.number_value ?? r.bool_value ?? r.value)); 
               c.show_logo = c.show_logo === 'true'; c.show_notes = c.show_notes !== 'false'; c.show_client = c.show_client !== 'false';
               setConfig(c);
               try { setExtraSocials(c.extra_socials ? JSON.parse(c.extra_socials) : []); } catch(e) {}
+              if (!data || data.length===0) {
+                setConfigError('Config vacío o bloqueado por RLS. Ejecuta supabase_sql/06_rls_policies_hardening.sql y 09_update_config_public_policy.sql en Supabase.');
+              }
           }
         }
     } catch (err) { console.error("Error loading:", err); } finally { setLoadingData(false); }
   };
 
   // Recargar cuando cambie el límite de logs
-  useEffect(() => { load(); }, [tab, date, filterService, logLimit]);
+  useEffect(() => { if (isLoading || !user) return; load(); }, [tab, date, filterService, logLimit, isLoading, user]);
 
   // --- FUNCIONES AUXILIARES ---
 
@@ -115,9 +121,11 @@ export default function Admin() {
       if (!detailOrder) return;
       
       // Obtener config fresca para el ticket
-      const { data } = await supabase.from('config').select('*');
+      const { data, error } = await supabase.from('config').select('*');
+          setConfigError('');
+          if (error) { setConfigError(error.message || 'No se pudo leer config'); return; }
       const c: any = {};
-      data?.forEach((r:any) => c[r.key] = r.numeric_value || r.text_value);
+      data?.forEach((r:any) => c[r.key] = (r.numeric_value ?? r.text_value));
 
       const settings = {
         business_name: c.nombre_tienda,
@@ -223,6 +231,7 @@ export default function Admin() {
           {key: 'wifi_pass', text_value: config.wifi_pass},
           {key: 'website', text_value: config.website},
           {key: 'extra_socials', text_value: JSON.stringify(extraSocials)},
+          {key: 'costo_delivery', numeric_value: Number(config.costo_delivery || 0)},
       ]; 
       for (const u of updates) await supabase.from('config').upsert(u); 
       logAction(user?.username || 'Admin', 'SAVE_CONFIG', 'Update');
@@ -310,11 +319,11 @@ export default function Admin() {
                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${o.service_type === 'Delivery' ? 'bg-blue-600' : 'bg-orange-600'}`}>{o.service_type === 'Delivery' ? <Bike size={20}/> : <Store size={20}/>}</div>
                          <div className="flex-1 min-w-0">
                              <div className="font-bold text-sm text-white truncate">#{o.id} - {o.client_name}</div>
-                             <div className="text-xs text-gray-400 flex flex-col"><span>{new Date(o.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • {o.payment_status}</span>{o.service_type === 'Delivery' && o.client_address && (<span className="text-blue-300 truncate max-w-[200px] block mt-0.5">{o.client_address}</span>)}</div>
+                             <div className="text-xs text-gray-400 flex flex-col"><span>{new Date(o.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • {o.payment_status} • {(o.final_payment_method || o.payment_method || '—')}</span>{o.service_type === 'Delivery' && o.client_address && (<span className="text-blue-300 truncate max-w-[200px] block mt-0.5">{o.client_address}</span>)}</div>
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
-                         <div className="text-right shrink-0"><div className="text-lg font-black text-green-500">S/ {o.total.toFixed(2)}</div>{o.delivery_cost > 0 && <div className="text-[9px] text-blue-400 font-bold">+S/{o.delivery_cost} env</div>}</div>
+                         <div className="text-right shrink-0"><div className="text-lg font-black text-green-500">S/ {Number(o.total || 0).toFixed(2)}</div>{o.delivery_cost > 0 && <div className="text-[9px] text-blue-400 font-bold">+S/{o.delivery_cost} env</div>}</div>
                          <Eye size={20} className="text-gray-600 group-hover:text-white transition-colors"/> 
                      </div>
                    </div>
@@ -324,7 +333,8 @@ export default function Admin() {
              {/* MODAL DETALLE CON BOTÓN DE TICKET */}
              {detailOrder && (<div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200"><div className="bg-card w-full max-w-sm rounded-2xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
                  <div className="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center"><h3 className="font-bold text-white">Detalle Orden #{detailOrder.id}</h3><button onClick={() => setDetailOrder(null)} className="text-gray-400 hover:text-white"><X size={20}/></button></div>
-                 <div className="p-4 overflow-y-auto space-y-4"><div className="grid grid-cols-2 gap-2 text-sm"><div className="text-gray-400">Fecha:</div><div className="text-white text-right">{new Date(detailOrder.created_at).toLocaleString()}</div><div className="text-gray-400">Cliente:</div><div className="text-white text-right font-bold">{detailOrder.client_name}</div></div><div className="bg-dark/50 rounded p-2 border border-gray-700">{detailOrder.items.map((i:any, idx:number) => (<div key={idx} className="flex justify-between py-1 border-b border-gray-800 last:border-0 text-sm"><span className="text-white">{i.qty} x {i.name}</span><span className="text-gray-400">S/ {(i.price * i.qty).toFixed(2)}</span></div>))}<div className="flex justify-between py-2 font-bold text-lg text-green-500 border-t border-gray-700 mt-1"><span>TOTAL</span><span>S/ {detailOrder.total.toFixed(2)}</span></div></div></div>
+                 <div className="p-4 overflow-y-auto space-y-4"><div className="grid grid-cols-2 gap-2 text-sm"><div className="text-gray-400">Fecha:</div><div className="text-white text-right">{new Date(detailOrder.created_at).toLocaleString()}</div><div className="text-gray-400">Cliente:</div><div className="text-white text-right font-bold">{detailOrder.client_name}</div>
+                      <div className="text-gray-400">Pagó con:</div><div className="text-white text-right">{detailOrder.final_payment_method || detailOrder.payment_method || '—'}</div></div><div className="bg-dark/50 rounded p-2 border border-gray-700">{detailOrder.items.map((i:any, idx:number) => (<div key={(i.id || i.name || 'item') + '-' + idx} className="flex justify-between py-1 border-b border-gray-800 last:border-0 text-sm"><span className="text-white">{i.qty} x {i.name}</span><span className="text-gray-400">S/ {Number((i.price || 0) * (i.qty || 0)).toFixed(2)}</span></div>))}<div className="flex justify-between py-2 font-bold text-lg text-green-500 border-t border-gray-700 mt-1"><span>TOTAL</span><span>S/ {Number(detailOrder.total || 0).toFixed(2)}</span></div></div></div>
                  
                  {/* NUEVO BOTÓN VER TICKET */}
                  <div className="p-3 bg-gray-900 border-t border-gray-700 flex flex-col gap-2">
@@ -380,7 +390,11 @@ export default function Admin() {
         
         {/* CONFIG con NUEVO RESET ID */}
         {tab === 'config' && (
-             <div className="space-y-6 max-w-6xl mx-auto pb-10">
+             <div className="space-y-6 max-w-6xl mx-auto pb-10">{configError && (
+  <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-3 rounded-xl text-sm">
+    <b>Config no visible:</b> {configError}
+  </div>
+)}
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><div className="lg:col-span-1 space-y-6"><div className="bg-card p-5 rounded-xl border border-gray-800 shadow-lg"><h3 className="font-bold text-lg mb-4 text-orange-500 flex items-center gap-2 border-b border-gray-800 pb-2"><Store/> Identidad</h3><div className="space-y-4"><div><label className="text-xs text-gray-400 font-bold uppercase">Nombre</label><input className="w-full bg-dark p-3 rounded-lg border border-gray-700" value={config.nombre_tienda || ''} onChange={e => setConfig({...config, nombre_tienda: e.target.value})}/></div><div><label className="text-xs text-gray-400 font-bold uppercase mb-2 block">Logo</label><div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-lg p-4 relative">{config.logo_url ? <div className="relative group"><img src={config.logo_url} alt="Preview" className="h-32 object-contain mb-2"/><button onClick={() => setConfig({...config, logo_url: ''})} className="absolute top-0 right-0 bg-red-600 p-1 rounded-full"><Trash2 size={14}/></button></div> : <div className="text-gray-500 py-4 text-center text-xs flex flex-col items-center"><ImageIcon size={40} className="mb-2 opacity-50"/>Sin logo</div>}<label className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2 px-4 rounded mt-2 flex items-center gap-2"><Upload size={14}/> Subir<input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} /></label></div></div></div></div></div>
                
                <div className="lg:col-span-2 space-y-6">
@@ -429,7 +443,49 @@ export default function Admin() {
 
                    <div className="bg-card p-5 rounded-xl border border-gray-800 shadow-lg"><h3 className="font-bold text-lg mb-4 text-yellow-500 flex items-center gap-2 border-b border-gray-800 pb-2"><FileText/> Diseño Básico Ticket</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="md:col-span-2"><label className="text-xs text-gray-400 font-bold uppercase">Dirección Local</label><input className="w-full bg-dark p-3 rounded-lg border border-gray-700" value={config.direccion_tienda || ''} onChange={e => setConfig({...config, direccion_tienda: e.target.value})}/></div><div><label className="text-xs text-gray-400 font-bold uppercase">Teléfono Local</label><input className="w-full bg-dark p-3 rounded-lg border border-gray-700" value={config.telefono_tienda || ''} onChange={e => setConfig({...config, telefono_tienda: e.target.value})}/></div><div><label className="text-xs text-gray-400 font-bold uppercase">Ancho Papel</label><div className="flex bg-dark rounded-lg p-1 border border-gray-700 mt-1"><button onClick={() => setConfig({...config, ancho_papel: '58'})} className={`flex-1 py-2 text-xs font-bold rounded ${config.ancho_papel !== '80' ? 'bg-gray-600 text-white' : 'text-gray-400'}`}>58mm</button><button onClick={() => setConfig({...config, ancho_papel: '80'})} className={`flex-1 py-2 text-xs font-bold rounded ${config.ancho_papel === '80' ? 'bg-gray-600 text-white' : 'text-gray-400'}`}>80mm</button></div></div><div className="md:col-span-2"><label className="text-xs text-gray-400 font-bold uppercase">Pie de Página (Texto)</label><input className="w-full bg-dark p-3 rounded-lg border border-gray-700" value={config.footer_ticket || ''} onChange={e => setConfig({...config, footer_ticket: e.target.value})}/></div><div className="md:col-span-2 grid grid-cols-3 gap-2 mt-2"><button onClick={() => setConfig({...config, show_logo: !config.show_logo})} className={`p-3 rounded border flex flex-col items-center gap-2 transition-all ${config.show_logo ? 'border-green-500 bg-green-900/20 text-green-400' : 'border-gray-700 text-gray-500'}`}>{config.show_logo ? <CheckSquare size={20}/> : <Square size={20}/>} <span className="text-xs font-bold">Logo</span></button><button onClick={() => setConfig({...config, show_client: !config.show_client})} className={`p-3 rounded border flex flex-col items-center gap-2 transition-all ${config.show_client ? 'border-green-500 bg-green-900/20 text-green-400' : 'border-gray-700 text-gray-500'}`}>{config.show_client ? <CheckSquare size={20}/> : <Square size={20}/>} <span className="text-xs font-bold">Cliente</span></button><button onClick={() => setConfig({...config, show_notes: !config.show_notes})} className={`p-3 rounded border flex flex-col items-center gap-2 transition-all ${config.show_notes ? 'border-green-500 bg-green-900/20 text-green-400' : 'border-gray-700 text-gray-500'}`}>{config.show_notes ? <CheckSquare size={20}/> : <Square size={20}/>} <span className="text-xs font-bold">Notas</span></button></div></div></div></div></div>
                
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div className="bg-card p-5 rounded-xl border border-gray-800"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2"><Bike/> Costos</h3><div className="flex gap-4"><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Cerca</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_cerca || 0} onChange={e => setConfig({...config, costo_cerca: Number(e.target.value)})}/></div><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Lejos</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_lejos || 0} onChange={e => setConfig({...config, costo_lejos: Number(e.target.value)})}/></div></div></div><div className="bg-card p-5 rounded-xl border border-blue-900/30 relative overflow-hidden group"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2 flex items-center gap-2"><MessageCircle/> Backup Telegram</h3><div className="space-y-3 relative z-10"><input type="password" placeholder="Bot Token" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_token || ''} onChange={e => setConfig({...config, tg_token: e.target.value})}/><input placeholder="Chat ID" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_chat_id || ''} onChange={e => setConfig({...config, tg_chat_id: e.target.value})}/><button onClick={testTelegramBackup} className="text-xs bg-blue-600/20 hover:bg-blue-600 hover:text-white text-blue-400 px-3 py-1 rounded border border-blue-600 transition-all flex items-center gap-2"><Upload size={12}/> Probar Conexión</button></div></div></div><div className="sticky bottom-4 z-50 flex justify-center mt-6"><button onClick={saveConf} className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105"><Save size={24}/> GUARDAR CAMBIOS</button></div><div className="mt-10 pt-10 border-t border-gray-800 text-center opacity-40 hover:opacity-100 transition-opacity"><button onClick={nukeDb} className="text-red-500 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"><AlertTriangle size={12}/> RESETEAR FÁBRICA</button></div>
+               
+               <div className="bg-card p-5 rounded-xl border border-gray-800 shadow-lg">
+                 <h3 className="font-bold text-lg mb-4 text-green-400 flex items-center gap-2"><MessageCircle size={18}/> Plantillas SMS (personalizable)</h3>
+                 <p className="text-xs text-gray-400 mb-4">Variables disponibles: <span className="text-gray-200">{'{cliente}'}</span>, <span className="text-gray-200">{'{tienda}'}</span>, <span className="text-gray-200">{'{pedido}'}</span>, <span className="text-gray-200">{'{estado}'}</span>, <span className="text-gray-200">{'{track}'}</span>.</p>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                     <label className="text-xs text-gray-400 font-bold uppercase">Saludo (sms_saludo)</label>
+                     <input className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_saludo || ''} onChange={e=>setConfig({...config, sms_saludo: e.target.value})} placeholder="Hola {cliente} 👋" />
+                   </div>
+                   <div>
+                     <label className="text-xs text-gray-400 font-bold uppercase">Firma (sms_firma)</label>
+                     <input className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_firma || ''} onChange={e=>setConfig({...config, sms_firma: e.target.value})} placeholder="Con cariño, {tienda} 🍕" />
+                   </div>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                   <div>
+                     <label className="text-xs text-gray-400 font-bold uppercase">Pendiente (sms_tpl_pendiente)</label>
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_pendiente || ''} onChange={e=>setConfig({...config, sms_tpl_pendiente: e.target.value})} />
+                   </div>
+                   <div>
+                     <label className="text-xs text-gray-400 font-bold uppercase">Horno (sms_tpl_horno)</label>
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_horno || ''} onChange={e=>setConfig({...config, sms_tpl_horno: e.target.value})} />
+                   </div>
+                   <div>
+                     <label className="text-xs text-gray-400 font-bold uppercase">Listo (sms_tpl_listo)</label>
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_listo || ''} onChange={e=>setConfig({...config, sms_tpl_listo: e.target.value})} />
+                   </div>
+                   <div>
+                     <label className="text-xs text-gray-400 font-bold uppercase">En Transporte (sms_tpl_en_transporte)</label>
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_en_transporte || ''} onChange={e=>setConfig({...config, sms_tpl_en_transporte: e.target.value})} />
+                   </div>
+                   <div className="md:col-span-2">
+                     <label className="text-xs text-gray-400 font-bold uppercase">Entregado (sms_tpl_entregado)</label>
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_entregado || ''} onChange={e=>setConfig({...config, sms_tpl_entregado: e.target.value})} />
+                   </div>
+                 </div>
+
+                 <div className="mt-3 text-xs text-gray-400">Guarda con el botón <span className="text-gray-200">Guardar Configuración</span>.</div>
+               </div>
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div className="bg-card p-5 rounded-xl border border-gray-800"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2"><Bike/> Costos</h3><div className="flex gap-4"><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Cerca</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_cerca || 0} onChange={e => setConfig({...config, costo_cerca: Number(e.target.value)})}/></div><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Lejos</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_lejos || 0} onChange={e => setConfig({...config, costo_lejos: Number(e.target.value)})}/></div></div></div><div className="bg-card p-5 rounded-xl border border-blue-900/30 relative overflow-hidden group"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2 flex items-center gap-2"><MessageCircle/> Backup Telegram</h3><div className="space-y-3 relative z-10"><input type="password" placeholder="Bot Token" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_token || ''} onChange={e => setConfig({...config, tg_token: e.target.value})}/><input placeholder="Chat ID" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_chat_id || ''} onChange={e => setConfig({...config, tg_chat_id: e.target.value})}/><button onClick={testTelegramBackup} className="text-xs bg-blue-600/20 hover:bg-blue-600 hover:text-white text-blue-400 px-3 py-1 rounded border border-blue-600 transition-all flex items-center gap-2"><Upload size={12}/> Probar Conexión</button></div></div></div><div className="sticky bottom-4 z-50 flex justify-center mt-6"><button onClick={saveConf} className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105"><Save size={24}/> GUARDAR CAMBIOS</button></div><div className="mt-10 pt-10 border-t border-gray-800 text-center opacity-40 hover:opacity-100 transition-opacity"><button onClick={nukeDb} className="text-red-500 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"><AlertTriangle size={12}/> RESETEAR FÁBRICA</button></div>
              </div>
         )}
       </div>

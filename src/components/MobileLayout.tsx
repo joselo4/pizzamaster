@@ -60,7 +60,7 @@ export default function MobileLayout() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden relative w-full max-w-7xl mx-auto">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative w-full max-w-7xl mx-auto">
         <Outlet />
       </main>
 
@@ -76,8 +76,11 @@ export default function MobileLayout() {
             )}
 
 {(isAdmin || user?.permissions?.includes('access_validation')) && (
-    <Link to="/validacion" className={`flex flex-col items-center gap-1 w-full h-full justify-center ${isActive('validacion') ? 'text-orange-500' : 'text-gray-500'}`}>
-        <ClipboardCheck size={20} className={isActive('validacion') ? 'fill-current' : ''} />
+    <Link to="/validacion" className={`flex flex-col items-center gap-1 w-full h-full justify-center relative ${isActive('validacion') ? 'text-orange-500' : 'text-gray-500'}`}>
+        <div className="relative">
+            <ClipboardCheck size={20} className={isActive('validacion') ? 'fill-current' : ''} />
+            {badges.validation > 0 && <span className="absolute -top-2 -right-3 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center border border-dark">{badges.validation}</span>}
+        </div>
         <span className="text-[10px] font-bold">Validación</span>
     </Link>
 )}

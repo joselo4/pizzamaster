@@ -37,6 +37,8 @@ export interface User {
   role: string;
   permissions: string[];
   active?: boolean;
+  session_token?: string;
+  session_expires_at?: string;
 }
 
 export interface Product {

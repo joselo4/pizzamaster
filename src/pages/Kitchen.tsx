@@ -3,6 +3,9 @@ import { supabase, logAction } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { type Order } from '../types';
 import { Clock, ChefHat, AlertCircle, Store, Bike } from 'lucide-react';
+import { openSmsComposer } from '../lib/smsDevice';
+import { buildStatusSmsMessage } from '../lib/smsTemplates';
+import { getConfigCache } from '../lib/configCache';
 
 export default function Kitchen() {
   const { user } = useAuth();
@@ -21,12 +24,34 @@ export default function Kitchen() {
     return () => { supabase.removeChannel(sub); };
   }, []);
 
+  const maybeNotifyClientSms = (order: Order, nextStatus: string) => {
+    if (!order?.client_phone) return;
+    const ok = window.confirm(`¿Enviar SMS al cliente (${order.client_phone}) con el estado: ${nextStatus}?`);
+    if (!ok) return;
+    const cfg = getConfigCache();
+    const track = String(order.id).toString(36).toUpperCase();
+    const msg = buildStatusSmsMessage({
+      orderId: order.id,
+      status: nextStatus,
+      serviceType: order.service_type,
+      clientName: order.client_name,
+      storeName: cfg.nombre_tienda || 'Pizzería',
+      trackingCode: track,
+    });
+    openSmsComposer(order.client_phone, msg);
+  };
+
   const advanceOrder = async (order: Order) => {
     const nextStatus = order.status === 'Pendiente' ? 'Horno' : 'Listo';
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: nextStatus as any } : o).filter(o => o.status !== 'Listo'));
     const { error } = await supabase.from('orders').update({ status: nextStatus }).eq('id', order.id);
-    if (!error) logAction(user?.username || 'Cocina', 'AVANZAR_PEDIDO', `${order.status} -> ${nextStatus}`, order.id);
-    else { fetchOrders(); alert("Error al actualizar"); }
+    if (!error) {
+      logAction(user?.username || 'Cocina', 'AVANZAR_PEDIDO', `${order.status} -> ${nextStatus}`, order.id);
+      maybeNotifyClientSms(order, nextStatus);
+    } else {
+      fetchOrders();
+      alert("Error al actualizar");
+    }
   };
 
   if (loading) return <div className="flex h-full items-center justify-center text-orange-500 animate-pulse">Cargando cocina...</div>;

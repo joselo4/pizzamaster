@@ -3,11 +3,16 @@ import { supabase, logAction } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { type Order } from '../types';
 import { Bike, MapPin, Phone, Navigation, CheckSquare, Square, Wallet, FileText, AlertCircle, Loader2, Armchair } from 'lucide-react';
+import { openSmsComposer } from '../lib/smsDevice';
+import { buildStatusSmsMessage } from '../lib/smsTemplates';
+import { getConfigCache } from '../lib/configCache';
 
 export default function Delivery() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
+  const [bulkSmsOrders, setBulkSmsOrders] = useState<Order[]>([]);
   const [loadingRoute, setLoadingRoute] = useState(false);
   
   const fetchOrders = async () => {
@@ -34,6 +39,50 @@ export default function Delivery() {
       setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
+  const maybeNotifyClientSms = (order: Order, nextStatus: string) => {
+    if (!order?.client_phone) return;
+    const ok = window.confirm(`¿Enviar SMS al cliente (${order.client_phone}) con el estado: ${nextStatus}?`);
+    if (!ok) return;
+    const cfg = getConfigCache();
+    const track = String(order.id).toString(36).toUpperCase();
+    const msg = buildStatusSmsMessage({
+      orderId: order.id,
+      status: nextStatus,
+      serviceType: order.service_type,
+      clientName: order.client_name,
+      storeName: cfg.nombre_tienda || 'Pizzería',
+      trackingCode: track,
+    });
+    openSmsComposer(order.client_phone, msg);
+  };
+
+  const buildSmsForOrder = (order: Order, status: string) => {
+    const cfg = getConfigCache();
+    const track = String(order.id).toString(36).toUpperCase();
+    return buildStatusSmsMessage({
+      orderId: order.id,
+      status,
+      serviceType: order.service_type,
+      clientName: order.client_name,
+      storeName: cfg.nombre_tienda || 'Pizzería',
+      trackingCode: track,
+    });
+  };
+
+  const openBulkSmsPanel = (status: string) => {
+    if (selectedIds.length === 0) return;
+    const list = orders.filter(o => selectedIds.includes(o.id) && !!o.client_phone);
+    if (list.length === 0) {
+      alert('No hay teléfonos disponibles en los pedidos seleccionados.');
+      return;
+    }
+    const ok = window.confirm(`¿Abrir panel de SMS para ${list.length} pedido(s) con estado: ${status}?`);
+    if (!ok) return;
+    setBulkSmsOrders(list);
+    setBulkSmsOpen(true);
+  };
+
+
   const startRouteMultiple = async () => {
       if (selectedIds.length === 0 || isRouteInProgress || loadingRoute) return;
       setLoadingRoute(true);
@@ -53,6 +102,7 @@ export default function Delivery() {
     const nextStatus = order.status === 'Listo' ? 'En Transporte' : 'Entregado';
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: nextStatus as any } : o).filter(o => o.status !== 'Entregado'));
     await supabase.from('orders').update({ status: nextStatus, delivery_by: user?.username }).eq('id', order.id);
+     maybeNotifyClientSms(order, nextStatus);
     logAction(user?.username || 'Reparto', 'ENTREGA', `Pedido #${order.id} -> ${nextStatus}`);
   };
 
@@ -61,14 +111,93 @@ export default function Delivery() {
 
   return (
     <div className="flex flex-col h-full bg-dark w-full relative">
+          {bulkSmsOpen && (
+            <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+              <div className="w-full max-w-2xl bg-card border border-white/10 rounded-2xl overflow-hidden">
+                <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                  <div>
+                    <div className="font-black text-lg">SMS para pedidos seleccionados</div>
+                    <div className="text-white/60 text-sm">Toca "Abrir SMS" para cada pedido. El navegador abrirá la app de mensajes del celular.</div>
+                  </div>
+                  <button
+                    onClick={() => { setBulkSmsOpen(false); setBulkSmsOrders([]); }}
+                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                <div className="p-4 max-h-[70vh] overflow-y-auto space-y-3">
+                  {bulkSmsOrders.map(o => {
+                    const msg = buildSmsForOrder(o, 'Listo');
+                    return (
+                      <div key={o.id} className="p-4 rounded-xl bg-black/20 border border-white/10">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-black">Pedido #{o.id} — {o.client_name || 'Cliente'}</div>
+                            <div className="text-white/60 text-sm">Tel: {o.client_phone || '—'}</div>
+                            <div className="text-white/60 text-xs mt-1">Dirección: {o.client_address || '—'}</div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => openSmsComposer(o.client_phone || '', msg)}
+                              className="px-3 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 font-black"
+                            >
+                              Abrir SMS
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(msg);
+                                  alert('Mensaje copiado.');
+                                } catch {
+                                  alert('No se pudo copiar.');
+                                }
+                              }}
+                              className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20"
+                            >
+                              Copiar
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-3 text-xs whitespace-pre-wrap text-white/80 bg-black/30 rounded-xl p-3">{msg}</div>
+                      </div>
+                    );
+                  })}
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      onClick={async () => {
+                        const all = bulkSmsOrders
+                          .map(o => `Pedido #${o.id} (${o.client_phone || ''})\n${buildSmsForOrder(o, 'Listo')}\n--------------------`)
+                          .join('\n');
+                        try {
+                          await navigator.clipboard.writeText(all);
+                          alert('Todos los mensajes fueron copiados.');
+                        } catch {
+                          alert('No se pudo copiar.');
+                        }
+                      }}
+                      className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20"
+                    >
+                      Copiar todos
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
       <div className="p-4 border-b border-gray-800 bg-card shadow-md z-10 flex justify-between items-center shrink-0">
         <h2 className="text-xl font-black text-white flex items-center gap-2"><Bike className="text-blue-500" /> REPARTO <span className="text-sm text-gray-500">({visibleOrders.length})</span></h2>
         
         {!isRouteInProgress && selectedIds.length > 0 ? (
-            <button onClick={startRouteMultiple} disabled={loadingRoute} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full font-bold text-xs animate-in fade-in slide-in-from-right-10 shadow-lg flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <button onClick={() => openBulkSmsPanel('Listo')} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-full font-bold text-xs shadow-lg flex items-center gap-2">
+                <span>SMS ({selectedIds.length})</span>
+              </button>
+              <button onClick={startRouteMultiple} disabled={loadingRoute} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full font-bold text-xs animate-in fade-in slide-in-from-right-10 shadow-lg flex items-center gap-2">
                 {loadingRoute ? <Loader2 className="animate-spin" size={14}/> : <Bike size={14}/>}
                 <span>INICIAR ({selectedIds.length})</span>
             </button>
+            </div>
         ) : isRouteInProgress && (
             <div className="bg-blue-900/50 text-blue-200 px-3 py-1 rounded text-xs font-bold border border-blue-500/30 animate-pulse">Ruta en curso</div>
         )}

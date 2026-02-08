@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase, logAction } from '../lib/supabase';
 import type { CartItem, OrderRequest, Product, ServiceType } from '../types';
 import { approveRequestToOrder, listPendingRequests, setRequestStatus } from '../lib/orderRequests';
-import { CheckCircle2, XCircle, Pencil, Plus, RefreshCw } from 'lucide-react';
+import {CheckCircle2, XCircle, Pencil, Plus, RefreshCw, Search, Filter, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 function money(n: number) { return `S/ ${Number(n||0).toFixed(2)}`; }
@@ -13,8 +13,9 @@ export default function Validation() {
   const [requests, setRequests] = useState<OrderRequest[]>([]);
   const [selected, setSelected] = useState<OrderRequest | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productSearch, setProductSearch] = useState('');
   const [items, setItems] = useState<CartItem[]>([]);
-  const [deliveryCost, setDeliveryCost] = useState<number>(0);
+  const [deliveryCost, setDeliveryCost] = useState<number>(3);
   const [notes, setNotes] = useState('');
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
@@ -51,7 +52,7 @@ export default function Validation() {
   const pick = async (r: OrderRequest) => {
     setSelected(r);
     setItems(r.items || []);
-    setDeliveryCost(r.delivery_fee || 0);
+    setDeliveryCost(r.service_type==='Delivery' ? (r.delivery_fee || 3) : 0);
     setNotes(r.notes || '');
     setClientName(r.customer_name || '');
     setClientPhone(r.phone || '');
@@ -150,145 +151,135 @@ export default function Validation() {
   };
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">Validación</h1>
-          <p className="text-white/60 text-sm">Revisa, edita y envía a cocina.</p>
+    <main className="mx-auto w-full max-w-7xl px-4 py-4 md:py-6">
+      <header className="mb-4 flex flex-wrap items-center gap-3">
+        <h1 className="text-xl font-semibold md:text-2xl">Validación</h1>
+        <div className="ml-auto flex flex-1 items-center gap-2 sm:flex-none">
+          <div className="flex w-full max-w-xs items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white shadow-sm">
+            <Search size={16} className="text-white/50" />
+            <input className="w-full bg-transparent outline-none text-sm placeholder:text-white/40" placeholder="Buscar (opcional)" />
+          </div>
+          <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white shadow-sm hover:bg-white/15" onClick={load}>
+            <RefreshCw size={16} /> Actualizar
+          </button>
         </div>
-        <button onClick={load} className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 flex items-center gap-2">
-          <RefreshCw size={18}/> Refrescar
-        </button>
-      </div>
+      </header>
 
-      {error && <div className="text-red-400 mb-3">{error}</div>}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="lg:col-span-5 xl:col-span-4">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-xs text-white/80"><Filter size={14} /> Cola</span>
+            <span className="text-xs text-white/60">{requests.length} solicitudes</span>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1 bg-white/5 border border-white/10 rounded-xl p-3">
-          <div className="font-semibold mb-2">Solicitudes</div>
-          <div className="space-y-2 max-h-[70vh] overflow-auto pr-2">
-            {requests.map(r => (
-              <button key={r.id} onClick={()=>pick(r)} className={`w-full text-left p-3 rounded-lg border ${selected?.id===r.id ? 'border-orange-500 bg-orange-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold">#{r.id} • {r.service_type === 'Delivery' ? 'Delivery' : 'Recojo'}</div>
-                  <div className="text-xs text-white/60">{r.status}</div>
+          <ul className="divide-y overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-sm">
+            {requests.map((r) => (
+              <li key={r.id} className={`flex cursor-pointer items-center justify-between gap-3 p-3 transition hover:bg-white/10 ${selected?.id===r.id ? 'bg-white/10' : ''}`} onClick={() => pick(r)}>
+                <div>
+                  <p className="text-sm font-medium">Solicitud #{r.id}</p>
+                  <p className="text-xs text-white/60">{r.phone} • {money(r.estimated_total || 0)}</p>
                 </div>
-                <div className="text-sm text-white/70">{r.customer_name || 'Cliente'} • {r.phone}</div>
-                <div className="text-sm text-orange-400 font-bold">{money(r.estimated_total || 0)}</div>
-              </button>
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-200/20 px-2 py-1 text-xs text-amber-200"><Clock size={14} /> {r.status}</span>
+              </li>
             ))}
-            {requests.length===0 && <div className="text-white/60 text-sm">No hay solicitudes pendientes.</div>}
+          </ul>
+        </div>
+
+        <div className="lg:col-span-7 xl:col-span-8">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm">
+            {!selected && <p className="text-sm text-white/70">Selecciona una solicitud para validar</p>}
+
+            {selected && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-base font-semibold">Solicitud #{selected.id}</h2>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-200/20 px-2 py-1 text-xs text-emerald-200"><CheckCircle2 size={14} /> {selected.status}</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs text-white/60">Resumen</p>
+                    <p className="text-sm">Items: {items.length}</p>
+                    <p className="mt-1 text-sm font-semibold">Total: {money(total)}</p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs text-white/60">Cliente</p>
+                    <p className="text-sm">{clientName || 'Cliente'}</p>
+                    <p className="text-sm">{clientPhone}</p>
+                    {serviceType==='Delivery' && <p className="text-sm">{clientAddress}</p>}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-sm font-medium">Entrega y costos</div>
+                    <div className="text-xs text-white/60">corrige envío / tiempo si aplica</div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label className="block">
+                      <div className="mb-1 text-xs text-white/60">Tipo de servicio</div>
+                      <select value={serviceType} onChange={(e) => setServiceType(e.target.value as any)} className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm">
+                        <option value="Delivery">Delivery</option>
+                        <option value="Local">Local</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <div className="mb-1 text-xs text-white/60">Costo de envío</div>
+                      <input type="number" min={0} step="0.5" value={serviceType==='Delivery' ? deliveryCost : 0} onChange={(e) => setDeliveryCost(Math.max(0, Number(e.target.value) || 0))} disabled={serviceType !== 'Delivery'} className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm disabled:opacity-60" />
+                      {serviceType !== 'Delivery' && <div className="mt-1 text-[11px] text-white/50">En Local el envío es 0</div>}
+                    </label>
+                    <label className="block md:col-span-2">
+                      <div className="mb-1 text-xs text-white/60">Tiempo estimado (min)</div>
+                      <input type="number" min={5} step="5" value={estimatedMinutes} onChange={(e) => setEstimatedMinutes(Math.max(5, Number(e.target.value) || 40))} className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm" />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-sm font-medium">Agregar producto</div>
+                    <div className="text-xs text-white/60">añade algo distinto a lo pedido</div>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="flex-1">
+                      <input list="products_list" value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder="Escribe el nombre del producto" className="w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm placeholder:text-white/40" />
+                      <datalist id="products_list">{products.map((p) => (<option key={p.id} value={p.name} />))}</datalist>
+                      <div className="mt-1 text-[11px] text-white/50">Tip: elige del autocompletado.</div>
+                    </div>
+                    <button type="button" onClick={() => { const name = (productSearch || '').trim().toLowerCase(); if (!name) return; const p = products.find(x => (x.name || '').trim().toLowerCase() === name) || products.find(x => (x.name || '').toLowerCase().includes(name)); if (!p) return; addProduct(p); setProductSearch(''); }} className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
+                      <Plus size={16} /> Añadir
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 p-3">
+                  <div className="mb-2 text-sm font-medium">Items</div>
+                  <ul className="divide-y divide-white/10">
+                    {items.map(i => (
+                      <li key={i.id} className="flex flex-col gap-2 py-2 md:flex-row md:items-center md:justify-between">
+                        <div className="min-w-0"><p className="truncate text-sm font-medium">{i.name}</p><p className="text-xs text-white/60">{money(i.price)}</p></div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input type="number" min={1} value={i.qty} onChange={(e)=>updateItemQty(i.id, Number(e.target.value)||1)} className="w-20 rounded-lg border border-white/10 bg-transparent px-2 py-1 text-sm" />
+                          <input type="number" min={0} value={i.price} onChange={(e)=>updateItemPrice(i.id, Number(e.target.value)||0)} className="w-24 rounded-lg border border-white/10 bg-transparent px-2 py-1 text-sm" />
+                          <button type="button" onClick={()=>removeItem(i.id)} className="rounded-lg bg-white/10 px-3 py-2 text-sm hover:bg-white/15">Quitar</button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <button type="button" onClick={saveEdits} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white shadow-sm hover:bg-white/15 disabled:opacity-60">Guardar cambios</button>
+                  <button type="button" onClick={reject} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/20 px-3 py-2 text-sm text-rose-100 shadow-sm hover:bg-rose-500/30 disabled:opacity-60"><XCircle size={16}/> Rechazar</button>
+                  <button type="button" onClick={approve} disabled={loading || items.length===0} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"><CheckCircle2 size={16}/> Validar</button>
+                </div>
+
+                {error && <div className="rounded-lg border border-rose-500/40 bg-rose-500/20 px-3 py-2 text-sm text-rose-100">{error}</div>}
+              </div>
+            )}
           </div>
         </div>
-
-        <div className="lg:col-span-2 bg-white/5 border border-white/10 rounded-xl p-0 overflow-hidden">
-          {!selected ? (
-            <div className="p-4 text-white/60">Selecciona una solicitud para revisar.</div>
-          ) : (
-            <div className="flex flex-col h-[75vh] lg:h-[80vh]">
-              <div className="flex-1 overflow-y-auto p-4 pb-28">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <div className="text-xl font-bold">Solicitud #{selected.id}</div>
-                    <div className="text-white/60 text-sm">Estado: {selected.status}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-white/60 text-sm">Total</div>
-                    <div className="text-2xl font-bold text-orange-400">{money(total)}</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                  <label className="bg-white/5 border border-white/10 rounded-xl p-3">
-                    <div className="text-xs text-white/60">Cliente</div>
-                    <input value={clientName} onChange={e=>setClientName(e.target.value)} className="bg-transparent outline-none w-full" />
-                  </label>
-                  <label className="bg-white/5 border border-white/10 rounded-xl p-3">
-                    <div className="text-xs text-white/60">Teléfono</div>
-                    <input value={clientPhone} onChange={e=>setClientPhone(e.target.value)} className="bg-transparent outline-none w-full" />
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <button onClick={()=>setServiceType('Delivery')} className={`p-3 rounded-xl border ${serviceType==='Delivery' ? 'border-orange-500 bg-orange-500/15' : 'border-white/10 bg-white/5'}`}>Delivery</button>
-                  <button onClick={()=>setServiceType('Local')} className={`p-3 rounded-xl border ${serviceType==='Local' ? 'border-orange-500 bg-orange-500/15' : 'border-white/10 bg-white/5'}`}>Recojo</button>
-                </div>
-
-                {serviceType==='Delivery' && (
-                  <label className="bg-white/5 border border-white/10 rounded-xl p-3 mb-3">
-                    <div className="text-xs text-white/60">Dirección</div>
-                    <input value={clientAddress} onChange={e=>setClientAddress(e.target.value)} className="bg-transparent outline-none w-full" />
-                  </label>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                  <label className="bg-white/5 border border-white/10 rounded-xl p-3">
-                    <div className="text-xs text-white/60">Costo Delivery</div>
-                    <input type="number" value={deliveryCost} onChange={e=>setDeliveryCost(Number(e.target.value))} className="bg-transparent outline-none w-full" />
-                  </label>
-                  <label className="bg-white/5 border border-white/10 rounded-xl p-3">
-                    <div className="text-xs text-white/60">Tiempo estimado (min)</div>
-                    <input type="number" value={estimatedMinutes} onChange={e=>setEstimatedMinutes(Number(e.target.value))} className="bg-transparent outline-none w-full" />
-                  </label>
-                </div>
-
-                <label className="bg-white/5 border border-white/10 rounded-xl p-3 mb-3">
-                  <div className="text-xs text-white/60">Notas</div>
-                  <textarea value={notes} onChange={e=>setNotes(e.target.value)} className="bg-transparent outline-none w-full" rows={3} />
-                </label>
-
-                <div className="mb-3">
-                  <div className="font-semibold mb-2 flex items-center gap-2"><Pencil size={18}/> Ítems (editable)</div>
-                  <div className="space-y-2">
-                    {items.map(i => (
-                      <div key={i.id} className="grid grid-cols-12 gap-2 items-center bg-white/5 border border-white/10 rounded-xl p-3">
-                        <div className="col-span-5 font-medium">{i.name}</div>
-                        <div className="col-span-2">
-                          <div className="text-xs text-white/60">Cant.</div>
-                          <input type="number" value={i.qty} onChange={e=>updateItemQty(i.id, Number(e.target.value))} className="bg-transparent border border-white/10 rounded-lg px-2 py-1 w-full" />
-                        </div>
-                        <div className="col-span-3">
-                          <div className="text-xs text-white/60">Precio</div>
-                          <input type="number" value={i.price} onChange={e=>updateItemPrice(i.id, Number(e.target.value))} className="bg-transparent border border-white/10 rounded-lg px-2 py-1 w-full" />
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <button onClick={()=>removeItem(i.id)} className="px-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30">Quitar</button>
-                        </div>
-                      </div>
-                    ))}
-                    {items.length===0 && <div className="text-white/60 text-sm">Sin ítems.</div>}
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="font-semibold mb-2 flex items-center gap-2"><Plus size={18}/> Agregar producto</div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-auto pr-2">
-                    {products.map(p => (
-                      <button key={p.id} onClick={()=>addProduct(p)} className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-left">
-                        <div className="font-medium">{p.name}</div>
-                        <div className="text-sm text-white/60">{p.category}</div>
-                        <div className="text-orange-400 font-bold">{money(p.price)}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="sticky bottom-0 p-4 bg-[#121212]/95 backdrop-blur border-t border-white/10">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <button disabled={loading} onClick={saveEdits} className="py-3 rounded-xl bg-white/10 hover:bg-white/20">Guardar cambios</button>
-                  <button disabled={loading} onClick={approve} className="py-3 rounded-xl bg-green-500 hover:bg-green-600 flex items-center justify-center gap-2"><CheckCircle2 size={18}/> Aprobar</button>
-                  <button disabled={loading} onClick={reject} className="py-3 rounded-xl bg-red-500 hover:bg-red-600 flex items-center justify-center gap-2"><XCircle size={18}/> Rechazar</button>
-                </div>
-
-                <div className="mt-2">
-                  <input value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="Motivo de rechazo" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none" />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
