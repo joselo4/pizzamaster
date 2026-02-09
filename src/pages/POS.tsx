@@ -35,7 +35,7 @@ export default function POS() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
-    supabase.from('products').select('*').eq('active', true).order('name').then(({ data }) => setProducts(data || []));
+    supabase.from('products').select('*').eq('active', true).order('name').then(({ data }) => { const list:any[] = (data || []) as any[]; list.sort((a,b)=>{ const ia=(a.sort_index ?? 1e9); const ib=(b.sort_index ?? 1e9); if (ia!==ib) return ia-ib; return String(a.name||'').localeCompare(String(b.name||'')); }); setProducts(list as any); });
     supabase.from('config').select('*').then(({ data }) => {
       const c: any = {};
       data?.forEach((row:any) => c[row.key] = row.numeric_value || row.text_value);
@@ -177,7 +177,7 @@ export default function POS() {
                const inCart = cart.find(i => i.id === p.id);
                return (
               <div key={p.id} onClick={() => updateCart(p, 1)} className={`relative bg-card p-2 rounded border cursor-pointer active:scale-95 flex flex-col justify-between ${inCart ? 'border-orange-500 bg-orange-900/10' : 'border-gray-800'}`}>
-                <div className="font-bold text-xs leading-none line-clamp-2">{p.name}</div>
+                <div className="font-bold text-xs leading-none whitespace-normal break-words max-w-full leading-snug">{p.name}</div>
                 <div className="text-orange-500 font-black text-sm mt-1">S/ {p.price}</div>
                 {inCart && <div className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-md">{inCart.qty}</div>}
               </div>
@@ -206,7 +206,7 @@ export default function POS() {
                 cart.map(i => (
                     <div key={i.id} className="flex justify-between items-center bg-dark p-2 rounded border border-gray-800 shadow-sm">
                         <div className="flex-1 pr-2">
-                            <div className="font-bold text-white text-sm leading-tight">{i.name}</div>
+                            <div className="font-bold text-white text-sm leading-tight whitespace-normal break-words max-w-full leading-snug">{i.name}</div>
                             <div className="text-[10px] text-gray-500">S/ {i.price} c/u</div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -227,7 +227,7 @@ export default function POS() {
                  </div>
                  <div className="relative flex-1">
                      <User size={14} className="absolute top-2.5 left-2 text-gray-500"/>
-                     <input className="bg-card p-2 pl-7 rounded w-full text-white text-xs border border-gray-700 outline-none h-9" placeholder="Nombre Cliente" value={name} onChange={e => setName(e.target.value)} />
+                     <input className="bg-card p-2 pl-7 rounded w-full text-white text-xs border border-gray-700 outline-none h-9 whitespace-normal break-words max-w-full leading-snug" placeholder="Nombre Cliente" value={name} onChange={e => setName(e.target.value)} />
                  </div>
              </div>
              

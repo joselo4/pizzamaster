@@ -47,6 +47,7 @@ export interface Product {
   price: number;
   category: string;
   active: boolean;
+  sort_index?: number | null;
 }
 
 export interface Customer {

@@ -151,7 +151,7 @@ export default function Promo() {
                   desc: 'La dieta no se salva 😅',
                 }].map((b, i) => (
                   <div key={i} className="rounded-2xl bg-card border border-white/10 p-4">
-                    <div className="flex items-center gap-2 font-bold">{b.icon} {b.title}</div>
+                    <div className="flex items-center gap-2 font-bold whitespace-normal break-words max-w-full leading-snug">{b.icon} {b.title}</div>
                     <div className="text-sm text-slate-300 mt-1">{b.desc}</div>
                   </div>
                 ))}

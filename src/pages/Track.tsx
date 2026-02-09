@@ -497,7 +497,7 @@ const meta = (norm === 'listo')
               </div>
 
               <div className="mt-3">
-                <div className="font-black text-lg">{meta.title}</div>
+                <div className="font-black text-lg whitespace-normal break-words max-w-full leading-snug">{meta.title}</div>
                 <div className="text-sm text-white/80 mt-1">{meta.desc}</div>
               {norm === 'pendiente' && (
   <div className="mt-3 border rounded-xl p-3 bg-yellow-500/10 border-yellow-500/30 text-yellow-200 text-sm">
@@ -562,8 +562,8 @@ const meta = (norm === 'listo')
               ) : (
                 <div className="space-y-2 text-sm">
                   {items.map((i: any) => (
-                    <div key={i.id || i.name} className="flex justify-between border-b border-white/10 pb-2">
-                      <span className="text-white/90">{i.qty} x {i.name}</span>
+                    <div key={i.id || i.name} className="flex justify-between border-b border-white/10 pb-2 whitespace-normal break-words max-w-full leading-snug">
+                      <span className="text-white/90 whitespace-normal break-words max-w-full leading-snug">{i.qty} x {i.name}</span>
                       <span className="text-white/80">{money(Number(i.price) * Number(i.qty))}
 
 </span>

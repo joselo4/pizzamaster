@@ -61,12 +61,24 @@ export default function CustomerOrder() {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('active', true)
-        .order('category', { ascending: true });
-      setProducts((data || []) as any);
+        .order('name', { ascending: true });
+      if (error) {
+        console.error(error);
+        setProducts([] as any);
+      } else {
+        const list:any[] = (data || []) as any[];
+        list.sort((a, b) => {
+          const ia = (a.sort_index ?? 1e9);
+          const ib = (b.sort_index ?? 1e9);
+          if (ia !== ib) return ia - ib;
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+        setProducts(list as any);
+      }
 
       try {
         const c = await fetchConfigMap();
@@ -84,12 +96,18 @@ export default function CustomerOrder() {
   const categories = useMemo(() => {
     const set = new Set<string>();
     products.forEach(p => set.add(p.category || 'Otros'));
-    return ['Todos', ...Array.from(set)];
+    return ['Todos', ...Array.from(set).sort((a,b)=>String(a).localeCompare(String(b)))];
   }, [products]);
 
   const filtered = useMemo(() => {
-    if (category === 'Todos') return products;
-    return products.filter(p => p.category === category);
+    const base = (category === 'Todos') ? products : products.filter(p => p.category === category);
+    // Mantener el orden personalizado (sort_index) también al filtrar
+    return [...base].sort((a: any, b: any) => {
+      const ia = (a.sort_index ?? 1e9);
+      const ib = (b.sort_index ?? 1e9);
+      if (ia !== ib) return ia - ib;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
   }, [products, category]);
 
   const totalItems = useMemo(() => cart.reduce((a, i) => a + i.qty, 0), [cart]);
@@ -223,7 +241,7 @@ export default function CustomerOrder() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((p) => { const q = qtyOf(p.id); return (
               <div key={p.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm transition hover:bg-white/10">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0"><div className="truncate text-sm font-black">{p.name}</div><div className="mt-0.5 text-xs text-white/60">{p.category}</div></div>
+                  <div className="min-w-0 whitespace-normal break-words max-w-full leading-snug"><div className=" text-sm font-black">{p.name}</div><div className="mt-0.5 text-xs text-white/60">{p.category}</div></div>
                   <div className="text-right"><div className="text-sm font-black text-orange-300">{money(p.price)}</div>{q>0 && <div className="mt-1 text-[11px] text-white/60">En carrito: {q}</div>}</div>
                 </div>
                 <div className="mt-3 flex items-center justify-between">
@@ -246,7 +264,7 @@ export default function CustomerOrder() {
                   <button type="button" onClick={() => setServiceType('Local')} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${serviceType==='Local' ? 'border-orange-500 bg-orange-500/15 text-orange-200' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>Local</button>
                 </div>
                 <div className="mt-3 space-y-2">
-                  <input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Nombre (opcional)" className="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-white/40" />
+                  <input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Nombre (opcional)" className="w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-white/40 whitespace-normal break-words max-w-full leading-snug" />
                   <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-transparent px-3 py-2"><Phone size={16} className="text-white/50" /><input value={phone} onChange={(e)=>setPhone(onlyDigits9(e.target.value))} placeholder="Teléfono (9 dígitos)" className="w-full bg-transparent text-sm outline-none placeholder:text-white/40" /></div>
                   {serviceType==='Delivery' && <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-transparent px-3 py-2"><MapPin size={16} className="text-white/50" /><input value={address} onChange={(e)=>setAddress(e.target.value)} placeholder="Dirección" className="w-full bg-transparent text-sm outline-none placeholder:text-white/40" /></div>}
                   <textarea value={notes} onChange={(e)=>setNotes(e.target.value)} placeholder="Notas (opcional)" className="h-20 w-full resize-none rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-white/40" />
@@ -257,7 +275,7 @@ export default function CustomerOrder() {
                 <div className="mb-2 flex items-center justify-between"><div className="text-sm font-black">Tu carrito</div><div className="text-xs text-white/60">{totalItems} items</div></div>
                 {cart.length===0 ? <div className="text-sm text-white/60">Aún no agregas productos.</div> : (
                   <ul className="divide-y divide-white/10">{cart.map((i) => (
-                    <li key={i.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><div className="truncate text-sm font-semibold">{i.name}</div><div className="text-xs text-white/60">{i.qty} × {money(i.price)}</div></div><div className="text-sm font-black text-orange-300">{money(i.qty*i.price)}</div></li>
+                    <li key={i.id} className="flex items-center justify-between gap-3 py-2 whitespace-normal break-words max-w-full leading-snug"><div className="min-w-0"><div className=" text-sm font-semibold">{i.name}</div><div className="text-xs text-white/60">{i.qty} × {money(i.price)}</div></div><div className="text-sm font-black text-orange-300">{money(i.qty*i.price)}</div></li>
                   ))}</ul>
                 )}
                 <div className="mt-3 space-y-1 text-sm"><div className="flex justify-between text-white/70"><span>Subtotal</span><span className="font-semibold">{money(subTotal)}</span></div>{serviceType==='Delivery' && <div className="flex justify-between text-white/70"><span>Envío</span><span className="font-semibold">{money(deliveryFee)}</span></div>}<div className="flex justify-between border-t border-white/10 pt-2"><span className="font-black">Total</span><span className="font-black text-orange-300">{money(total)}</span></div></div>
@@ -285,7 +303,7 @@ export default function CustomerOrder() {
               <div className="flex items-center justify-between"><div className="font-black text-lg">Tu carrito</div><button type="button" onClick={() => setCartOpen(false)} className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">Cerrar</button></div>
               <div className="mt-3 space-y-2">
                 {cart.length === 0 ? <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/60">No hay productos.</div> : cart.map(i => (
-                  <div key={i.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"><div className="min-w-0"><div className="truncate font-semibold">{i.name}</div><div className="text-xs text-white/60">{money(i.price)}</div></div><div className="flex items-center gap-2"><button type="button" onClick={() => dec(i.id)} className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"><Minus size={16}/></button><div className="w-10 text-center font-black">{i.qty}</div><button type="button" onClick={() => inc(i.id)} className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"><Plus size={16}/></button><button type="button" onClick={() => setCart(prev => prev.filter(x => x.id !== i.id))} className="h-10 w-10 rounded-xl bg-rose-500/20 text-rose-200 hover:bg-rose-500/30" title="Quitar"><Trash2 size={16}/></button></div></div>
+                  <div key={i.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 whitespace-normal break-words max-w-full leading-snug"><div className="min-w-0"><div className=" font-semibold">{i.name}</div><div className="text-xs text-white/60">{money(i.price)}</div></div><div className="flex items-center gap-2"><button type="button" onClick={() => dec(i.id)} className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"><Minus size={16}/></button><div className="w-10 text-center font-black">{i.qty}</div><button type="button" onClick={() => inc(i.id)} className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10"><Plus size={16}/></button><button type="button" onClick={() => setCart(prev => prev.filter(x => x.id !== i.id))} className="h-10 w-10 rounded-xl bg-rose-500/20 text-rose-200 hover:bg-rose-500/30" title="Quitar"><Trash2 size={16}/></button></div></div>
                 ))}
               </div>
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4"><div className="flex justify-between text-sm text-white/70"><span>Subtotal</span><span className="font-semibold">{money(subTotal)}</span></div>{serviceType==='Delivery' && <div className="mt-1 flex justify-between text-sm text-white/70"><span>Envío</span><span className="font-semibold">{money(deliveryFee)}</span></div>}<div className="mt-2 flex justify-between border-t border-white/10 pt-2"><span className="font-black">Total</span><span className="font-black text-orange-300">{money(total)}</span></div></div>

@@ -126,7 +126,7 @@ export default function Cashier() {
                     
                     <div className="bg-black/20 p-2 rounded text-xs text-gray-400 overflow-y-auto max-h-[100px] mb-2 space-y-1">
                         {o.items.map((i, idx) => (
-                            <div key={idx} className="truncate border-b border-white/5 pb-0.5 last:border-0">• {i.qty} {i.name}</div>
+                            <div key={idx} className="border-b border-white/5 pb-0.5 last:border-0 whitespace-normal break-words max-w-full leading-snug">• {i.qty} {i.name}</div>
                         ))}
                     </div>
                 </div>
@@ -163,7 +163,7 @@ export default function Cashier() {
                         <div className="space-y-2">
                             {selectedOrder.items.map((i, idx) => (
                                 <div key={idx} className="flex justify-between text-sm border-b border-gray-800 pb-1 last:border-0">
-                                    <span className="text-white font-medium">{i.qty} x {i.name}</span>
+                                    <span className="text-white font-medium whitespace-normal break-words max-w-full leading-snug">{i.qty} x {i.name}</span>
                                     <span className="text-gray-400">S/ {(i.price * i.qty).toFixed(2)}</span>
                                 </div>
                             ))}

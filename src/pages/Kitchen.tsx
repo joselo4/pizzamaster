@@ -103,7 +103,7 @@ export default function Kitchen() {
                         <div key={i} className="flex justify-between items-center border-b border-gray-700 pb-2 last:border-0">
                             <div className="flex items-center gap-3">
                                 <span className="bg-gray-700 text-white font-black w-8 h-8 flex items-center justify-center rounded-lg text-lg">{item.qty}</span>
-                                <span className="text-gray-200 font-bold text-lg leading-tight">{item.name}</span>
+                                <span className="text-gray-200 font-bold text-lg leading-tight whitespace-normal break-words max-w-full leading-snug">{item.name}</span>
                             </div>
                         </div>
                     ))}

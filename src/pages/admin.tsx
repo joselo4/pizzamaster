@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase, logAction } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { sendBackupToTelegram } from '../lib/telegram';
 import { generateTicketPDF } from '../lib/ticket'; // Importado para reimprimir
 import { 
-  Trash2, Edit, Save, Plus, RefreshCw, RotateCcw, 
+  Trash2, Edit, Save, Plus, RefreshCw, RotateCcw, GripVertical, 
   Upload, AlertTriangle, DollarSign, Image as ImageIcon,
   ShoppingBag, Bike, Store, TrendingUp, FileText, MessageCircle, CheckSquare, Square,
   Shield, User as UserIcon, Users, Calendar, Search, Eye, X, Wifi, Globe, Instagram, Facebook, Video, Printer, Hash
@@ -38,6 +38,48 @@ export default function Admin() {
   
   // RESET ID
   const [newOrderId, setNewOrderId] = useState('');
+
+  // --- ORDEN DE PRODUCTOS (drag & drop) ---
+  const [dragProdId, setDragProdId] = useState<string | null>(null);
+  const [savingProdOrder, setSavingProdOrder] = useState(false);
+
+  const reorderProducts = (fromId: any, toId: any) => {
+    setData(prev => {
+      const arr = Array.isArray(prev) ? [...prev] : [];
+      const from = arr.findIndex((x:any) => String(x.id) === String(fromId));
+      const to = arr.findIndex((x:any) => String(x.id) === String(toId));
+      if (from < 0 || to < 0 || from === to) return prev;
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      return arr;
+    });
+  };
+
+  const saveProductOrder = async () => {
+    if (savingProdOrder) return;
+    try {
+      setSavingProdOrder(true);
+      const arr:any[] = Array.isArray(data) ? data : [];
+      const payload = arr.map((p:any, idx:number) => ({ id: p.id, index: idx + 1 }));
+      const { error } = await supabase.rpc('rpc_set_product_order', { p_items: payload });
+      if (error) throw error;
+      setData(arr.map((p:any, idx:number) => ({ ...p, sort_index: idx + 1 })));
+      await logAction(user?.username || 'Admin', 'SET_PROD_ORDER', `Productos: ${payload.length}`);
+      alert('✅ Orden guardado');
+    } catch (e:any) {
+      alert('❌ Error guardando orden: ' + (e?.message || e));
+    } finally {
+      setSavingProdOrder(false);
+    }
+  };
+
+  const productsView = useMemo(() => {
+    const arr:any[] = Array.isArray(data) ? data : [];
+    const q = (searchTerm || '').trim().toLowerCase();
+    if (!q) return arr;
+    return arr.filter((p:any) => String(p.name || '').toLowerCase().includes(q));
+  }, [data, searchTerm, tab]);
+
 
   const availablePermissions = [
       { id: 'access_pos', label: 'Toma de Pedidos' },
@@ -193,7 +235,7 @@ setConfig(c);
 
   const saveProd = async (e: any) => { 
       e.preventDefault(); 
-      const p = { name: editItem.name, price: Number(editItem.price), category: editItem.category || 'Pizzas', active: true }; 
+      const p = { name: editItem.name, price: Number(editItem.price), category: editItem.category || 'Pizzas', sort_index: (editItem.sort_index === '' || editItem.sort_index === undefined) ? null : Number(editItem.sort_index), active: true }; 
       if (editItem.id) await supabase.from('products').update(p).eq('id', editItem.id); else await supabase.from('products').insert(p); 
       logAction(user?.username || 'Admin', 'SAVE_PROD', p.name);
       setIsModal(false); load(); 
@@ -467,7 +509,7 @@ setConfig(c);
           <div className="space-y-4 animate-in fade-in">
              <div className="grid grid-cols-2 gap-3"><div className="bg-gradient-to-br from-green-600 to-green-900 p-4 rounded-xl shadow-lg col-span-2 flex items-center justify-between"><div><h3 className="text-green-200 font-bold">VENTA TOTAL</h3><div className="text-4xl font-black">S/ {stats.total.toFixed(2)}</div></div><DollarSign size={40} className="text-green-300 opacity-50"/></div><div className="bg-card p-4 rounded-xl border-l-4 border-blue-500"> <h3 className="text-gray-400 text-xs font-bold">PAGADO</h3> <div className="text-2xl font-bold">S/ {stats.cash.toFixed(2)}</div> </div><div className="bg-card p-4 rounded-xl border-l-4 border-orange-500"> <h3 className="text-gray-400 text-xs font-bold">POR COBRAR</h3> <div className="text-2xl font-bold text-orange-500">S/ {stats.contra.toFixed(2)}</div> </div></div>
              <div className="grid grid-cols-3 gap-3 text-center"><div className="bg-card p-3 rounded-xl"><h3 className="text-gray-400 text-xs mb-1">PEDIDOS</h3><div className="text-xl font-bold flex justify-center items-center gap-1"><ShoppingBag size={16}/> {stats.count}</div></div><div className="bg-card p-3 rounded-xl"><h3 className="text-gray-400 text-xs mb-1">DELIVERY</h3><div className="text-xl font-bold flex justify-center items-center gap-1"><Bike size={16}/> {stats.delivery}</div></div><div className="bg-card p-3 rounded-xl"><h3 className="text-gray-400 text-xs mb-1">LOCAL</h3><div className="text-xl font-bold flex justify-center items-center gap-1"><Store size={16}/> {stats.local}</div></div></div>
-             <div className="bg-card rounded-xl p-4 border border-gray-800"><h3 className="text-orange-400 font-bold mb-3 flex items-center gap-2"><TrendingUp size={18}/> TOP PRODUCTOS HOY</h3><div className="space-y-2">{topProducts.map((p, idx) => (<div key={idx} className="flex justify-between items-center border-b border-gray-800 pb-1"><span className="font-bold text-sm">#{idx+1} {p.name}</span><span className="bg-orange-900 text-orange-200 px-2 rounded-full text-xs font-bold">{p.qty} un.</span></div>))}</div></div>
+             <div className="bg-card rounded-xl p-4 border border-gray-800 whitespace-normal break-words max-w-full leading-snug"><h3 className="text-orange-400 font-bold mb-3 flex items-center gap-2"><TrendingUp size={18}/> TOP PRODUCTOS HOY</h3><div className="space-y-2">{topProducts.map((p, idx) => (<div key={idx} className="flex justify-between items-center border-b border-gray-800 pb-1"><span className="font-bold text-sm">#{idx+1} {p.name}</span><span className="bg-orange-900 text-orange-200 px-2 rounded-full text-xs font-bold">{p.qty} un.</span></div>))}</div></div>
           </div>
         )}
 
@@ -495,7 +537,7 @@ setConfig(c);
              {detailOrder && (<div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200"><div className="bg-card w-full max-w-sm rounded-2xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
                  <div className="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center"><h3 className="font-bold text-white">Detalle Orden #{detailOrder.id}</h3><button onClick={() => setDetailOrder(null)} className="text-gray-400 hover:text-white"><X size={20}/></button></div>
                  <div className="p-4 overflow-y-auto space-y-4"><div className="grid grid-cols-2 gap-2 text-sm"><div className="text-gray-400">Fecha:</div><div className="text-white text-right">{new Date(detailOrder.created_at).toLocaleString()}</div><div className="text-gray-400">Cliente:</div><div className="text-white text-right font-bold">{detailOrder.client_name}</div>
-                      <div className="text-gray-400">Pagó con:</div><div className="text-white text-right">{detailOrder.final_payment_method || detailOrder.payment_method || '—'}</div></div><div className="bg-dark/50 rounded p-2 border border-gray-700">{detailOrder.items.map((i:any, idx:number) => (<div key={(i.id || i.name || 'item') + '-' + idx} className="flex justify-between py-1 border-b border-gray-800 last:border-0 text-sm"><span className="text-white">{i.qty} x {i.name}</span><span className="text-gray-400">S/ {Number((i.price || 0) * (i.qty || 0)).toFixed(2)}</span></div>))}<div className="flex justify-between py-2 font-bold text-lg text-green-500 border-t border-gray-700 mt-1"><span>TOTAL</span><span>S/ {Number(detailOrder.total || 0).toFixed(2)}</span></div></div></div>
+                      <div className="text-gray-400 whitespace-normal break-words max-w-full leading-snug">Pagó con:</div><div className="text-white text-right">{detailOrder.final_payment_method || detailOrder.payment_method || '—'}</div></div><div className="bg-dark/50 rounded p-2 border border-gray-700">{detailOrder.items.map((i:any, idx:number) => (<div key={(i.id || i.name || 'item') + '-' + idx} className="flex justify-between py-1 border-b border-gray-800 last:border-0 text-sm"><span className="text-white">{i.qty} x {i.name}</span><span className="text-gray-400">S/ {Number((i.price || 0) * (i.qty || 0)).toFixed(2)}</span></div>))}<div className="flex justify-between py-2 font-bold text-lg text-green-500 border-t border-gray-700 mt-1"><span>TOTAL</span><span>S/ {Number(detailOrder.total || 0).toFixed(2)}</span></div></div></div>
                  
                  {/* NUEVO BOTÓN VER TICKET */}
                  <div className="p-3 bg-gray-900 border-t border-gray-700 flex flex-col gap-2">
@@ -540,17 +582,76 @@ setConfig(c);
         {tab === 'clientes' && (
              <div>
                  <button onClick={() => openClientModal({})} className="mb-4 bg-blue-600 px-3 py-2 rounded font-bold flex gap-2 shadow-lg"><Plus size={18} /> Nuevo Cliente</button>
-                 <div className="grid gap-2">{filteredData.map((i: any) => (<div key={i.phone} className="bg-card p-3 rounded border border-gray-800 flex justify-between items-center"><div><div className="font-bold flex items-center gap-2"><Users size={16} className="text-blue-500"/> {i.name}</div><div className="text-xs text-gray-400">{i.phone} {i.address && `(${i.address})`}</div></div><div className="flex gap-3"><button onClick={() => openClientModal(i)} className="text-blue-400"><Edit size={18}/></button><button onClick={() => del('customers', i.phone)} className="text-red-500"><Trash2 size={18}/></button></div></div>))}</div>
+                 <div className="grid gap-2 whitespace-normal break-words max-w-full leading-snug">{filteredData.map((i: any) => (<div key={i.phone} className="bg-card p-3 rounded border border-gray-800 flex justify-between items-center"><div><div className="font-bold flex items-center gap-2"><Users size={16} className="text-blue-500"/> {i.name}</div><div className="text-xs text-gray-400">{i.phone} {i.address && `(${i.address})`}</div></div><div className="flex gap-3"><button onClick={() => openClientModal(i)} className="text-blue-400"><Edit size={18}/></button><button onClick={() => del('customers', i.phone)} className="text-red-500"><Trash2 size={18}/></button></div></div>))}</div>
                  {isClientModal && (<div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"><form onSubmit={saveClient} className="bg-card p-6 rounded-xl border border-gray-700 w-full max-w-sm"><h3 className="text-xl font-bold mb-4">{editItem.phone ? 'Editar' : 'Nuevo'} Cliente</h3><input className="w-full bg-dark p-3 rounded mb-3 border border-gray-600" placeholder="Teléfono" value={editItem.phone || ''} onChange={e => setEditItem({...editItem, phone: e.target.value})} disabled={!!editItem.phone && !!data.find(c => c.phone === editItem.phone)} /><input className="w-full bg-dark p-3 rounded mb-3 border border-gray-600" placeholder="Nombre" value={editItem.name || ''} onChange={e => setEditItem({...editItem, name: e.target.value})} /><input className="w-full bg-dark p-3 rounded mb-4 border border-gray-600" placeholder="Dirección" value={editItem.address || ''} onChange={e => setEditItem({...editItem, address: e.target.value})} /><div className="flex gap-2"><button type="button" onClick={() => setIsClientModal(false)} className="flex-1 bg-gray-700 p-3 rounded">Cancelar</button><button className="flex-1 bg-blue-600 p-3 rounded font-bold">Guardar</button></div></form></div>)}
              </div>
         )}
 
-        {tab === 'productos' && (
-          <div><button onClick={() => { setEditItem({}); setIsModal(true) }} className="mb-4 bg-green-600 px-3 py-2 rounded font-bold flex gap-2"><Plus size={18}/> Nuevo Producto</button><div className="grid gap-2">{filteredData.map((p: any) => (<div key={p.id} className="bg-card p-3 rounded border border-gray-800 flex justify-between items-center"><div><div className="font-bold">{p.name}</div><div className="text-sm text-orange-500 font-bold">S/ {p.price}</div></div><div className="flex gap-3"><button onClick={() => { setEditItem(p); setIsModal(true) }} className="text-blue-400"><Edit size={18}/></button><button onClick={() => del('products', p.id)} className="text-red-500"><Trash2 size={18}/></button></div></div>))}</div>{isModal && !selectedPerms.length && (<div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"><form onSubmit={saveProd} className="bg-card p-6 rounded-xl border border-gray-700 w-full max-w-sm"><input className="w-full bg-dark p-3 rounded mb-3 border border-gray-600" placeholder="Nombre" value={editItem.name || ''} onChange={e => setEditItem({...editItem, name: e.target.value})} /><input type="number" className="w-full bg-dark p-3 rounded mb-3 border border-gray-600" placeholder="Precio" value={editItem.price || ''} onChange={e => setEditItem({...editItem, price: e.target.value})} /><select className="w-full bg-dark p-3 rounded mb-4 border border-gray-600" value={editItem.category || 'Pizzas'} onChange={e => setEditItem({...editItem, category: e.target.value})}><option value="Pizzas">Pizzas</option><option value="Bebidas">Bebidas</option><option value="Extras">Extras</option></select><div className="flex gap-2"><button type="button" onClick={() => setIsModal(false)} className="flex-1 bg-gray-700 p-3 rounded">Cancelar</button><button className="flex-1 bg-green-600 p-3 rounded font-bold">Guardar</button></div></form></div>)}</div>
-        )}
         
-        {/* CONFIG con NUEVO RESET ID */}
-        {tab === 'config' && (
+{tab === 'productos' && (
+  <div>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div className="flex items-center gap-2">
+        <button onClick={() => { setEditItem({}); setIsModal(true); }} className="bg-green-600 px-3 py-2 rounded font-bold flex gap-2 items-center">
+          <Plus size={18}/> Nuevo Producto
+        </button>
+        <button onClick={saveProductOrder} disabled={savingProdOrder || !Array.isArray(data) || data.length === 0}
+          className="bg-orange-600 px-3 py-2 rounded font-bold flex gap-2 items-center disabled:opacity-60">
+          <Save size={18}/> {savingProdOrder ? 'Guardando...' : 'Guardar orden'}
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        <input className="bg-dark px-3 py-2 rounded border border-gray-700 w-full sm:w-72" placeholder="Buscar producto..."
+          value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+        <button onClick={() => setSearchTerm('')} className="bg-gray-800 px-3 py-2 rounded border border-gray-700" title="Limpiar">
+          <X size={18}/>
+        </button>
+      </div>
+    </div>
+
+    <div className="text-xs text-gray-400 mb-2">
+      Tip: Arrastra usando el icono <span className="inline-flex align-middle"><GripVertical size={14}/></span> y luego presiona <b>Guardar orden</b>.
+    </div>
+
+    <div className="grid gap-2">
+      {(productsView as any[]).map((p: any, idx: number) => (
+        <div key={p.id} draggable onDragStart={() => setDragProdId(String(p.id))} onDragOver={(e) => e.preventDefault()}
+          onDrop={() => { if (dragProdId) reorderProducts(dragProdId, p.id); setDragProdId(null); }}
+          className={`bg-card p-3 rounded border border-gray-800 flex justify-between items-center gap-3 ${dragProdId === String(p.id) ? 'ring-2 ring-orange-500/60' : ''}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="text-gray-400 cursor-grab active:cursor-grabbing" title="Arrastrar"><GripVertical size={18}/></div>
+            <div className="min-w-0">
+              <div className="font-bold whitespace-normal break-words max-w-full leading-snug">{p.name}</div>
+              <div className="text-sm text-orange-500 font-bold">S/ {p.price}</div>
+              <div className="text-[11px] text-gray-400">Orden: <b>{p.sort_index ?? (idx + 1)}</b> • Categoría: {p.category || '—'}</div>
+            </div>
+          </div>
+          <div className="flex gap-3 shrink-0">
+            <button onClick={() => { setEditItem(p); setIsModal(true); }} className="text-blue-400"><Edit size={18}/></button>
+            <button onClick={() => del('products', p.id)} className="text-red-500"><Trash2 size={18}/></button>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {isModal && !selectedPerms.length && (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <form onSubmit={saveProd} className="bg-card p-6 rounded-xl border border-gray-700 w-full max-w-sm">
+          <h3 className="text-xl font-bold mb-4">{editItem.id ? 'Editar' : 'Nuevo'} Producto</h3>
+          <input className="w-full bg-dark p-3 rounded mb-3 border border-gray-600" placeholder="Nombre" value={editItem.name || ''} onChange={e => setEditItem({ ...editItem, name: e.target.value })} />
+          <input type="number" className="w-full bg-dark p-3 rounded mb-3 border border-gray-600" placeholder="Precio" value={editItem.price || ''} onChange={e => setEditItem({ ...editItem, price: e.target.value })} />
+          <input type="number" className="w-full bg-dark p-3 rounded mb-3 border border-gray-600" placeholder="Orden (opcional)" value={editItem.sort_index || ''} onChange={e => setEditItem({ ...editItem, sort_index: e.target.value })} />
+          <select className="w-full bg-dark p-3 rounded mb-4 border border-gray-600" value={editItem.category || 'Pizzas'} onChange={e => setEditItem({ ...editItem, category: e.target.value })}>
+            <option value="Pizzas">Pizzas</option><option value="Bebidas">Bebidas</option><option value="Extras">Extras</option>
+          </select>
+          <button className="w-full bg-orange-600 py-3 rounded font-bold flex justify-center gap-2 items-center"><Save size={18}/> Guardar</button>
+          <button type="button" onClick={() => setIsModal(false)} className="mt-3 w-full bg-gray-700 py-3 rounded font-bold">Cancelar</button>
+        </form>
+      </div>
+    )}
+  </div>
+)}
+{tab === 'config' && (
              <div className="space-y-6 max-w-6xl mx-auto pb-10">{configError && (
   <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-3 rounded-xl text-sm">
     <b>Config no visible:</b> {configError}

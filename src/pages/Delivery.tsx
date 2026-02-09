@@ -268,7 +268,7 @@ export default function Delivery() {
                             <FileText size={10}/> Detalles del Pedido:
                         </div>
                         <div className="space-y-1">
-                            {order.items.map((i, idx) => (<div key={idx} className="text-sm text-gray-300 border-b border-white/5 pb-1 last:border-0 flex justify-between"><span>{i.qty} {i.name}</span></div>))}
+                            {order.items.map((i, idx) => (<div key={idx} className="text-sm text-gray-300 border-b border-white/5 pb-1 last:border-0 flex justify-between whitespace-normal break-words max-w-full leading-snug"><span>{i.qty} {i.name}</span></div>))}
                         </div>
                     </div>
                  </div>

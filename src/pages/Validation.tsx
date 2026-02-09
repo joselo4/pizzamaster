@@ -257,7 +257,7 @@ export default function Validation() {
                   <ul className="divide-y divide-white/10">
                     {items.map(i => (
                       <li key={i.id} className="flex flex-col gap-2 py-2 md:flex-row md:items-center md:justify-between">
-                        <div className="min-w-0"><p className="truncate text-sm font-medium">{i.name}</p><p className="text-xs text-white/60">{money(i.price)}</p></div>
+                        <div className="min-w-0 whitespace-normal break-words max-w-full leading-snug"><p className=" text-sm font-medium">{i.name}</p><p className="text-xs text-white/60">{money(i.price)}</p></div>
                         <div className="flex flex-wrap items-center gap-2">
                           <input type="number" min={1} value={i.qty} onChange={(e)=>updateItemQty(i.id, Number(e.target.value)||1)} className="w-20 rounded-lg border border-white/10 bg-transparent px-2 py-1 text-sm" />
                           <input type="number" min={0} value={i.price} onChange={(e)=>updateItemPrice(i.id, Number(e.target.value)||0)} className="w-24 rounded-lg border border-white/10 bg-transparent px-2 py-1 text-sm" />
