@@ -11,9 +11,11 @@ export default function PromoInfo() {
   const { id } = useParams();
   const [campaign, setCampaign] = useState<any | null>(null);
   const [card, setCard] = useState<any | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'notfound'>('loading');
 
   useEffect(() => {
     (async () => {
+      setStatus('loading');
       const key = String(id || '').toLowerCase();
 
       // 1) Buscar en campaigns
@@ -22,6 +24,7 @@ export default function PromoInfo() {
       if (found) {
         setCampaign(found);
         setCard(null);
+        setStatus('ready');
         return;
       }
 
@@ -35,11 +38,13 @@ export default function PromoInfo() {
       if (match) {
         setCard(match);
         setCampaign(null);
+        setStatus('ready');
         return;
       }
 
       setCampaign(null);
       setCard(null);
+      setStatus('notfound');
     })().catch(()=>{});
   }, [id]);
 
@@ -91,17 +96,37 @@ export default function PromoInfo() {
     return null;
   }, [campaign, card]);
 
-  if (!view) {
-    return (
-      <div className="min-h-screen bg-dark text-white px-4 py-10">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-          <div className="text-2xl font-black">Promo no encontrada</div>
-          <p className="mt-2 text-white/70">Revisa el enlace o vuelve a promociones.</p>
-          <Link to="/promo" className="mt-4 inline-block rounded-xl bg-white/10 px-4 py-2 font-bold hover:bg-white/15">Volver</Link>
+
+if (status === 'loading') {
+  return (
+    <div className="min-h-screen bg-dark text-white px-4 py-10">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6">
+        <div className="animate-pulse">
+          <div className="h-6 w-40 bg-white/10 rounded" />
+          <div className="mt-4 h-10 w-full bg-white/10 rounded" />
+          <div className="mt-3 h-10 w-5/6 bg-white/10 rounded" />
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="h-12 bg-white/10 rounded" />
+            <div className="h-12 bg-white/10 rounded" />
+          </div>
         </div>
+        <div className="mt-4 text-xs text-white/60">Cargando información de la promo…</div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+if (!view || status === 'notfound') {
+  return (
+    <div className="min-h-screen bg-dark text-white px-4 py-10">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+        <div className="text-2xl font-black">Promo no encontrada</div>
+        <p className="mt-2 text-white/70">Revisa el enlace o vuelve a promociones.</p>
+        <Link to="/promo" className="mt-4 inline-block rounded-xl bg-white/10 px-4 py-2 font-bold hover:bg-white/15">Volver</Link>
+      </div>
+    </div>
+  );
+}
 
   const pedidoUrl = `/pedido?promo=${encodeURIComponent(view.promoCode || '')}&ref=${encodeURIComponent(view.id)}`;
 

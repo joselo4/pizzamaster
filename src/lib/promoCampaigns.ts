@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { refreshConfigCache } from './configCache';
+import { getConfigCache, refreshConfigCache } from './configCache';
 
 export type PromoCampaign = {
   id: string;
@@ -61,6 +61,14 @@ function fromLegacy(cfg: any): PromoCampaign {
 }
 
 export async function getConfigPromoRaw(): Promise<any[]> {
+  const cached: any = getConfigCache();
+  const rawCached = cached?.promo_promos;
+  if (rawCached) {
+    try {
+      const list = typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
+      if (Array.isArray(list)) return list;
+    } catch {}
+  }
   const cfg: any = await refreshConfigCache();
   const raw = cfg?.promo_promos;
   if (!raw) return [];
@@ -73,6 +81,21 @@ export async function getConfigPromoRaw(): Promise<any[]> {
 }
 
 export async function loadPromoCampaigns(): Promise<PromoCampaign[]> {
+  // 1) Intentar cache local (rápido)
+  const cachedCfg: any = getConfigCache();
+  const cachedRaw = cachedCfg?.promo_promos;
+  if (cachedRaw) {
+    try {
+      const list = typeof cachedRaw === 'string' ? JSON.parse(cachedRaw) : cachedRaw;
+      if (Array.isArray(list) && list.length && typeof list[0] === 'object') {
+        if ('id' in list[0] && (('headline' in list[0]) || ('name' in list[0]))) {
+          return (list as any[]).map((c:any)=>({ ...c, info_url: c?.info_url ? String(c.info_url) : null }));
+        }
+      }
+    } catch {}
+  }
+
+  // 2) Si no hay cache, refrescar desde DB
   const cfg: any = await refreshConfigCache();
   const raw = cfg?.promo_promos;
 

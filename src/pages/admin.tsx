@@ -9,6 +9,7 @@ import {
   ShoppingBag, Bike, Store, TrendingUp, FileText, MessageCircle, CheckSquare, Square,
   Shield, User as UserIcon, Users, Calendar, Search, Eye, X, Wifi, Globe, Instagram, Facebook, Video, Printer, Hash
 } from 'lucide-react';
+import PromoCampaignsManager from '../components/promo/PromoCampaignsManager';
 
 export default function Admin() {
   const { user, isLoading } = useAuth();
@@ -357,7 +358,10 @@ setConfig(c);
   <div className="space-y-4">
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <div>
-        <h2 className="text-2xl font-black">Promo (Landing QR)</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl font-black">Promo (Landing QR)</h2>
+          <PromoCampaignsManager />
+        </div>
         <div className="text-xs text-emerald-300 font-bold">PROMO UI OK</div>
       </div>
       <div className="flex items-center gap-2">
@@ -662,7 +666,10 @@ setConfig(c);
         {tab === 'promo' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <h2 className="text-2xl font-black">Promo (Landing QR)</h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl font-black">Promo (Landing QR)</h2>
+          <PromoCampaignsManager />
+        </div>
               <div className="flex items-center gap-2">
                 <a href="/promo?ref=carlos" target="_blank" rel="noreferrer" className="px-4 py-2 rounded-xl bg-gray-800 text-orange-200 font-bold">Vista previa</a>
                 <button onClick={saveConf} className="px-4 py-2 rounded-xl bg-orange-600 text-white font-black">Guardar</button>
