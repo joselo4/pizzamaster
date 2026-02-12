@@ -1,11 +1,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import {useNavigate, Link, useLocation} from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { CartItem, Product, ServiceType } from '../types';
 import { canSendRequest, markSent } from '../lib/rateLimit';
 import { createOrderRequest, fetchConfigMap } from '../lib/orderRequests';
 import { ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza } from 'lucide-react';
+import { logPedidoVisit } from '../lib/promoCampaigns';
 
 function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
@@ -22,6 +23,19 @@ function onlyDigits9(v: string) {
 
 export default function CustomerOrder() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(location.search);
+      const ref = params.get('ref');
+      if (!ref) return;
+      const key = `promo_visit_logged:${ref}`;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+      logPedidoVisit(ref, null, `${location.pathname}${location.search}`);
+    } catch {}
+  }, [location.search]);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<string>('Todos');
@@ -217,8 +231,7 @@ export default function CustomerOrder() {
               <div className="text-lg font-black leading-tight">Haz tu pedido</div>
               <div className="mt-0.5 flex items-center gap-2 text-xs text-white/60"><Clock size={14} /> Tiempo estimado: {estimatedMinutes} min{serviceType==='Delivery' ? <> <span className="text-white/30">•</span><span>Envío: {money(deliveryFee)}</span></> : null}</div>
             </div>
-            <button onClick={() => navigate('/login')} className="shrink-0 rounded-2xl bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15" type="button"><span className="flex items-center gap-2"><UserCog size={18}/> Soy operador</span></button>
-          </div>
+</div>
 
           <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3">
             <div className="text-xs font-semibold text-white/70">¿Ya hiciste tu pedido? Ingresa tu token/código para ver el estado</div>

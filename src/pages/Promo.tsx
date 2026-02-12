@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Phone, MessageCircle, Pizza, Sparkles, Flame, Truck, BadgeCheck, ChevronDown } from 'lucide-react';
 import { getConfigCache, refreshConfigCache } from '../lib/configCache';
+import { slugify } from '../lib/promoCampaigns';
 
 const DEFAULT_PHONE = '+51989466466';
 const DEFAULT_WA = '51989466466';
@@ -58,7 +59,36 @@ export default function Promo() {
     { tag: 'COMBO', title: 'Combo 2x Personales', price: 'S/ 24', note: '2 pizzas personales', promo: 'COMBO2', bullets: ['Comparte sin culpa', 'Elige sabores', 'Súmale bebida'] },
     { tag: 'FAMILIAR', title: 'Familiar + Bebida', price: 'S/ 39', note: 'Ideal para 3–4', promo: 'FAMILIAR39', bullets: ['Perfecto para la casa', 'Más queso, más amor', 'Cae bien con chisme'] },
   ]), []);
-  const promos = safeJson<any[]>(cfg?.promo_promos, defaultPromos);
+
+const promosRaw = safeJson<any[]>(cfg?.promo_promos, defaultPromos);
+
+const promos = useMemo(() => {
+  if (!Array.isArray(promosRaw) || promosRaw.length === 0) return defaultPromos;
+  const first: any = promosRaw[0] || {};
+  const looksLikeCampaign = ('id' in first) && (('headline' in first) || ('name' in first));
+
+  if (looksLikeCampaign) {
+    return (promosRaw as any[])
+      .filter((c:any) => c?.active !== false)
+      .map((c:any) => ({
+        id: String(c?.id || ''),
+        info_url: c?.info_url ?? null,
+        tag: 'PROMO',
+        title: c?.headline || c?.name || c?.id,
+        price: c?.price_text || '',
+        note: c?.detail_text || c?.subheadline || '',
+        promo: c?.cta_code || c?.id,
+        bullets: [c?.subheadline, c?.detail_text].filter(Boolean),
+      }));
+  }
+
+  // Legacy cards: agrega id estable (promo code o slug del título)
+  return (promosRaw as any[]).map((p:any) => ({
+    ...p,
+    id: String(p?.promo || slugify(p?.title || p?.name || 'promo')),
+    info_url: p?.info_url ?? null,
+  }));
+}, [promosRaw, defaultPromos]);
 
   if (!promoActive) {
     return (
@@ -221,9 +251,34 @@ export default function Promo() {
                   </ul>
                 </div>
 
-                <Link to={`/pedido?promo=${encodeURIComponent(p.promo || '')}`} className="mt-5 w-full inline-flex items-center justify-center rounded-2xl bg-orange-500 hover:bg-orange-600 px-4 py-3 font-black">
-                  Pedir
-                </Link>
+                
+<div className="mt-5 grid grid-cols-2 gap-2">
+  {(() => {
+    const pid = String(p.id || p.promo || slugify(p.title) || i);
+    const internalInfo = `/promo/${encodeURIComponent(pid)}`;
+    const info = p.info_url ? String(p.info_url) : '';
+    const isExternal = /^https?:\/\//i.test(info);
+    const pedido = `/pedido?promo=${encodeURIComponent(p.promo || '')}&ref=${encodeURIComponent(pid)}`;
+
+    return (
+      <>
+        {isExternal ? (
+          <a href={info} target="_blank" rel="noreferrer" className="w-full inline-flex items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-3 font-black">
+            Ver info
+          </a>
+        ) : (
+          <Link to={internalInfo} className="w-full inline-flex items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-3 font-black">
+            Ver info
+          </Link>
+        )}
+
+        <Link to={pedido} className="w-full inline-flex items-center justify-center rounded-2xl bg-orange-500 hover:bg-orange-600 px-4 py-3 font-black">
+          Pedir
+        </Link>
+      </>
+    );
+  })()}
+</div>
               </div>
             ))}
           </div>

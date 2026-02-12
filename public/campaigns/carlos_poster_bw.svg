@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="794" height="1123" viewBox="0 0 794 1123">
+  <rect width="794" height="1123" fill="#f7f7f7"/>
+  <path d="M40 40 H754 V1060 H40 Z" fill="#ffffff" stroke="#111" stroke-width="3" stroke-dasharray="6,6"/>
+  <text x="70" y="120" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="900" fill="#111">¡CARLOS TE ENGAÑA!</text>
+  <text x="70" y="165" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111">(Y TE DEJÓ SIN CENA)</text>
+  <text x="70" y="235" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#111">ESCANEA EL QR</text>
+  <text x="70" y="262" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#111">para ver el chisme completo y reclamar la promo.</text>
+  <rect x="130" y="310" width="534" height="534" fill="#fff" stroke="#111" stroke-width="8"/>
+  <path d="M130 310 L664 844" stroke="#111" stroke-width="2" opacity="0.2"/>
+  <path d="M664 310 L130 844" stroke="#111" stroke-width="2" opacity="0.2"/>
+  <text x="397" y="592" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="800" fill="#111">PEGA AQUÍ TU QR</text>
+  <text x="70" y="920" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="900" fill="#111">PROMO DEL DÍA</text>
+  <text x="70" y="952" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#111">Pizza personal + bebida</text>
+  <text x="70" y="1000" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="900" fill="#111">S/ 10</text>
+  <text x="70" y="1050" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#111">* Si no carga, entra manual: /promo?ref=carlos</text>
+  <rect x="60" y="32" width="180" height="22" fill="#ddd" opacity="0.9" transform="rotate(-4 60 32)"/>
+  <rect x="560" y="32" width="180" height="22" fill="#ddd" opacity="0.9" transform="rotate(5 560 32)"/>
+</svg>
