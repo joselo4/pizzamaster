@@ -26,6 +26,8 @@ export default function CustomerOrder() {
   const location = useLocation();
 
   useEffect(() => {
+    let onFocus: any;
+    let onVis: any;
     try {
       const params = new URLSearchParams(location.search);
       const ref = params.get('ref');
@@ -38,7 +40,7 @@ export default function CustomerOrder() {
   }, [location.search]);
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [category, setCategory] = useState<string>('Todos');
+  const [category, setCategory] = useState<string>('Pizzas');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -51,6 +53,8 @@ export default function CustomerOrder() {
   // Aviso para clientes (configurable desde Admin > Config)
   const [notice, setNotice] = useState<string>('');
   useEffect(() => {
+    let onFocus: any;
+    let onVis: any;
     (async () => {
       try {
         const cfg: any = await fetchConfigMap();
@@ -74,6 +78,8 @@ export default function CustomerOrder() {
   const [trackInput, setTrackInput] = useState('');
 
   useEffect(() => {
+    let onFocus: any;
+    let onVis: any;
     const load = async () => {
       const { data, error } = await supabase
         .from('products')
@@ -94,35 +100,62 @@ export default function CustomerOrder() {
         setProducts(list as any);
       }
 
-      try {
-        const c = await fetchConfigMap();
-        const est = Number(c.tiempo_estimado_min || c.estimated_minutes || 40);
-        setEstimatedMinutes(Number.isFinite(est) ? est : 40);
-        const df = Number(c.costo_delivery || c.delivery_fee || 2);
-        setDeliveryFee(Number.isFinite(df) ? df : 2);
-      } catch {
-        // defaults
-      }
+const loadConfig = async () => {
+  try {
+    const c = await fetchConfigMap();
+    const est = Number(c.tiempo_estimado_min || c.estimated_minutes || 40);
+    setEstimatedMinutes(Number.isFinite(est) ? est : 40);
+    const df = Number(c.costo_delivery || c.delivery_fee || 2);
+    setDeliveryFee(Number.isFinite(df) ? df : 2);
+  } catch {
+    // defaults
+  }
+};
+
+await loadConfig();
+
+// ✅ quirúrgico: refrescar config al volver al tab/ventana
+onFocus = () => { loadConfig(); };
+window.addEventListener('focus', onFocus);
+onVis = () => { if (document.visibilityState === 'visible') loadConfig(); };
+document.addEventListener('visibilitychange', onVis);
     };
     load();
+    return () => {
+      try { window.removeEventListener('focus', onFocus); } catch {}
+      try { document.removeEventListener('visibilitychange', onVis); } catch {}
+    };
   }, []);
 
   const categories = useMemo(() => {
-    const set = new Set<string>();
-    products.forEach(p => set.add(p.category || 'Otros'));
-    return ['Todos', ...Array.from(set).sort((a,b)=>String(a).localeCompare(String(b)))];
-  }, [products]);
+  const set = new Set<string>();
+  products.forEach(p => set.add(p.category || 'Otros'));
+
+  // Tabs fijos (los existentes) + nuevo tab Promo
+  const fixed = ['Pizzas', 'Promo', 'Bebidas', 'Extras', 'Todos'];
+  const dynamic = Array.from(set)
+    .filter(c => !fixed.includes(c))
+    .sort((a, b) => String(a).localeCompare(String(b)));
+
+  return Array.from(new Set([...fixed, ...dynamic]));
+}, [products]);
 
   const filtered = useMemo(() => {
-    const base = (category === 'Todos') ? products : products.filter(p => p.category === category);
-    // Mantener el orden personalizado (sort_index) también al filtrar
-    return [...base].sort((a: any, b: any) => {
-      const ia = (a.sort_index ?? 1e9);
-      const ib = (b.sort_index ?? 1e9);
-      if (ia !== ib) return ia - ib;
-      return String(a.name || '').localeCompare(String(b.name || ''));
-    });
-  }, [products, category]);
+  const base =
+    category === 'Todos'
+      ? products
+      : category === 'Promo'
+        ? products.filter((p: any) => Boolean(p?.is_promo))
+        : products.filter(p => p.category === category);
+
+  // Mantener el orden personalizado (sort_index) también al filtrar
+  return [...base].sort((a: any, b: any) => {
+    const ia = (a.sort_index ?? 1e9);
+    const ib = (b.sort_index ?? 1e9);
+    if (ia !== ib) return ia - ib;
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+}, [products, category]);
 
   const totalItems = useMemo(() => cart.reduce((a, i) => a + i.qty, 0), [cart]);
   const subTotal = useMemo(() => cart.reduce((a, i) => a + i.qty * i.price, 0), [cart]);
