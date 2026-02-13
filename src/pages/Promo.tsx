@@ -82,25 +82,11 @@ const promos = useMemo(() => {
       }));
   }
 
-<<<<<<< HEAD
   // Legacy cards: agrega id estable (promo code o slug del título)
   return (promosRaw as any[]).map((p:any) => ({
     ...p,
     id: String(p?.promo || slugify(p?.title || p?.name || 'promo')),
     info_url: p?.info_url ?? null,
-=======
-// Legacy cards: normaliza claves (price_text/price, detail_text/note, cta_code/promo)
-  return (promosRaw as any[]).map((p:any) => ({
-    ...p,
-    id: String(p?.promo || p?.cta_code || slugify(p?.title || p?.name || p?.headline || 'promo')),
-    info_url: p?.info_url ?? null,
-    tag: p?.tag || 'PROMO',
-    title: p?.title || p?.headline || p?.name || '',
-    price: p?.price || p?.price_text || p?.priceText || '',
-    note: p?.note || p?.detail_text || p?.subheadline || '',
-    promo: p?.promo || p?.cta_code || p?.code || p?.id || '',
-    bullets: Array.isArray(p?.bullets) ? p.bullets : [p?.subheadline, p?.detail_text].filter(Boolean),
->>>>>>> ae4d33d (subida desde mi proyecto local)
   }));
 }, [promosRaw, defaultPromos]);
 
@@ -255,11 +241,7 @@ const promos = useMemo(() => {
                 <div className="mt-4">
                   <div className="text-xl font-black break-words">{p.title || ''}</div>
                   <div className="mt-2 flex items-baseline gap-2">
-<<<<<<< HEAD
                     <div className="text-4xl font-black text-emerald-400">{p.price || ''}</div>
-=======
-                    <div className="text-4xl font-black text-emerald-400">{p.price || p.price_text || p.priceText || ''}</div>
->>>>>>> ae4d33d (subida desde mi proyecto local)
                     <div className="text-slate-300 break-words">{p.note || ''}</div>
                   </div>
                   <ul className="mt-4 space-y-2 text-sm text-slate-300">

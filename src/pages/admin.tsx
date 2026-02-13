@@ -10,6 +10,7 @@ import {
   Shield, User as UserIcon, Users, Calendar, Search, Eye, X, Wifi, Globe, Instagram, Facebook, Video, Printer, Hash
 } from 'lucide-react';
 import PromoCampaignsManager from '../components/promo/PromoCampaignsManager';
+import AdminPedidoSettings from './AdminPedidoSettings';
 
 export default function Admin() {
   const { user, isLoading } = useAuth();
@@ -236,7 +237,7 @@ setConfig(c);
 
   const saveProd = async (e: any) => { 
       e.preventDefault(); 
-      const p = { name: editItem.name, price: Number(editItem.price), category: editItem.category || 'Pizzas', sort_index: (editItem.sort_index === '' || editItem.sort_index === undefined) ? null : Number(editItem.sort_index), active: true }; 
+      const p = { name: editItem.name, price: Number(editItem.price), category: editItem.category || 'Pizzas', sort_index: (editItem.sort_index === '' || editItem.sort_index === undefined) ? null : Number(editItem.sort_index), active: true, is_promo: !!editItem.is_promo }; 
       if (editItem.id) await supabase.from('products').update(p).eq('id', editItem.id); else await supabase.from('products').insert(p); 
       logAction(user?.username || 'Admin', 'SAVE_PROD', p.name);
       setIsModal(false); load(); 
@@ -327,8 +328,8 @@ setConfig(c);
   return (
     <div className="flex flex-col h-full bg-dark text-white p-2 pb-20">
       <div className="flex gap-2 overflow-x-auto pb-2 mb-2 border-b border-gray-800 no-scrollbar shrink-0">
-        {['dash', 'gestion', 'productos', 'usuarios', 'clientes', 'logs', 'config', 'promo'].map(t => (
-            <button key={t} onClick={() => { setTab(t); setSearchTerm(''); }} className={`px-4 py-2 rounded-lg font-bold capitalize whitespace-nowrap transition-all ${tab === t ? 'bg-orange-600 text-white scale-105' : 'bg-gray-800 text-gray-400'}`}>{t === 'gestion' ? 'Historial' : t}</button>
+        {['dash', 'gestion', 'productos', 'usuarios', 'clientes', 'logs', 'config', 'pedido', 'promo'].map(t => (
+            <button key={t} onClick={() => { setTab(t); setSearchTerm(''); }} className={`px-4 py-2 rounded-lg font-bold capitalize whitespace-nowrap transition-all ${tab === t ? 'bg-orange-600 text-white scale-105' : 'bg-gray-800 text-gray-400'}`}>{t === 'gestion' ? 'Historial' : (t === 'pedido' ? 'Ajustes rápidos' : t)}</button>
         ))}
       </div>
 
@@ -627,7 +628,7 @@ setConfig(c);
             <div className="min-w-0">
               <div className="font-bold whitespace-normal break-words max-w-full leading-snug">{p.name}</div>
               <div className="text-sm text-orange-500 font-bold">S/ {p.price}</div>
-              <div className="text-[11px] text-gray-400">Orden: <b>{p.sort_index ?? (idx + 1)}</b> • Categoría: {p.category || '—'}</div>
+              <div className="text-[11px] text-gray-400">Orden: <b>{p.sort_index ?? (idx + 1)}</b> • Categoría: {p.category || '—'}{p.is_promo ? ' • Promo' : ''}</div>
             </div>
           </div>
           <div className="flex gap-3 shrink-0">
@@ -648,6 +649,14 @@ setConfig(c);
           <select className="w-full bg-dark p-3 rounded mb-4 border border-gray-600" value={editItem.category || 'Pizzas'} onChange={e => setEditItem({ ...editItem, category: e.target.value })}>
             <option value="Pizzas">Pizzas</option><option value="Bebidas">Bebidas</option><option value="Extras">Extras</option>
           </select>
+          <label className="flex items-center gap-2 text-sm mb-4 select-none">
+            <input
+              type="checkbox"
+              checked={!!editItem.is_promo}
+              onChange={(e) => setEditItem({ ...editItem, is_promo: e.target.checked })}
+            />
+            <span>Mostrar este producto en la pestaña <b>Promo</b> de <b>/pedido</b></span>
+          </label>
           <button className="w-full bg-orange-600 py-3 rounded font-bold flex justify-center gap-2 items-center"><Save size={18}/> Guardar</button>
           <button type="button" onClick={() => setIsModal(false)} className="mt-3 w-full bg-gray-700 py-3 rounded font-bold">Cancelar</button>
         </form>
@@ -655,6 +664,10 @@ setConfig(c);
     )}
   </div>
 )}
+{tab === 'pedido' && (
+  <AdminPedidoSettings />
+)}
+
 {tab === 'config' && (
              <div className="space-y-6 max-w-6xl mx-auto pb-10">{configError && (
   <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-3 rounded-xl text-sm">

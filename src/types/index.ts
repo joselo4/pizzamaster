@@ -48,6 +48,7 @@ export interface Product {
   category: string;
   active: boolean;
   sort_index?: number | null;
+  is_promo?: boolean;
 }
 
 export interface Customer {

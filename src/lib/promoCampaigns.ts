@@ -80,38 +80,6 @@ export async function getConfigPromoRaw(): Promise<any[]> {
   }
 }
 
-<<<<<<< HEAD
-=======
-
-function legacyCardsToCampaigns(list: any[], cfg: any): PromoCampaign[] {
-  // Convierte [{title, price, note, promo, tag, bullets}] a formato campañas (id/headline/price_text/detail_text/cta_code)
-  return (list || []).filter(Boolean).map((p:any, idx:number) => {
-    const id = String(p?.promo || p?.cta_code || p?.id || slugify(p?.title || p?.name || p?.headline || `promo-${idx}`));
-    const bullets = Array.isArray(p?.bullets) ? p.bullets.filter(Boolean) : [];
-    const detail = [p?.note, ...bullets].filter(Boolean).join(' · ');
-    return {
-      id,
-      name: String(p?.title || p?.name || p?.headline || id),
-      active: p?.active === false ? false : true,
-      priority: typeof p?.priority === 'number' ? p.priority : (100 - idx),
-      headline: String(p?.title || p?.headline || p?.name || id),
-      subheadline: p?.tag ? String(p.tag) : undefined,
-      body: undefined,
-      price_text: String(p?.price || p?.price_text || p?.priceText || ''),
-      detail_text: detail || undefined,
-      cta_label: cfg?.promo_cta_label ?? 'Pedir ahora',
-      cta_code: String(p?.promo || p?.cta_code || id),
-      phone: cfg?.promo_phone ?? null,
-      wa_number: cfg?.promo_wa_number ?? null,
-      wa_message: cfg?.promo_wa_message ?? null,
-      hero_image: null,
-      theme: 'amber',
-      info_url: p?.info_url ? String(p.info_url) : null,
-    } as PromoCampaign;
-  });
-}
-
->>>>>>> ae4d33d (subida desde mi proyecto local)
 export async function loadPromoCampaigns(): Promise<PromoCampaign[]> {
   // 1) Intentar cache local (rápido)
   const cachedCfg: any = getConfigCache();
@@ -139,13 +107,6 @@ export async function loadPromoCampaigns(): Promise<PromoCampaign[]> {
         if ('id' in list[0] && (('headline' in list[0]) || ('name' in list[0]))) {
           return (list as any[]).map((c:any)=>({ ...c, info_url: c?.info_url ? String(c.info_url) : null }));
         }
-<<<<<<< HEAD
-=======
-        // legacy cards format
-        if ('title' in list[0] || 'price' in list[0] || 'promo' in list[0]) {
-          return legacyCardsToCampaigns(list as any[], cfg);
-        }
->>>>>>> ae4d33d (subida desde mi proyecto local)
       }
     } catch {
       // ignore
