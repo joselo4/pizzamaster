@@ -1,35 +1,33 @@
-#!/usr/bin/env bash
-set -o errexit
-set -o pipefail
+#!/usr/bin/env sh
+set -e
 
-echo "== Render build: forcing clean deps =="
+echo "== Render build: clean install =="
 rm -rf node_modules
 rm -f package-lock.json
 
 npm install
 
-echo "== Vite version used =="
-node -e "try{console.log('VITE_VERSION=' + require('vite/package.json').version)}catch(e){console.error('VITE_NOT_FOUND'); process.exit(1)}"
+echo "== Vite version =="
+node -p "'VITE_VERSION=' + require('vite/package.json').version"
 
 npm run build
 
-echo "== Verify dist/index.html is real HTML =="
-if [[ ! -f dist/index.html ]]; then
-  echo "ERROR: dist/index.html not found"; exit 1
-fi
+echo "== Verify dist/index.html =="
+[ -f dist/index.html ] || { echo "ERROR: dist/index.html not found"; exit 1; }
 
-head -n 3 dist/index.html
+# show first lines
+head -n 3 dist/index.html || true
 
-# Fail fast if index.html is the bad JS export
-if grep -q "^export default "/assets/" dist/index.html; then
+# fail if it's the JS export stub
+if grep -q '^export default "/assets/' dist/index.html; then
   echo "ERROR: dist/index.html is NOT HTML (contains export default).";
-  echo "This means the build is still wrong. Check that Render used this script and that Vite is official.";
   exit 1
 fi
 
-# Fail if doctype missing (quirks)
-if ! grep -qi "<!doctype html>" dist/index.html; then
-  echo "ERROR: dist/index.html missing DOCTYPE"; exit 1
+# fail if doctype missing
+if ! grep -qi '<!doctype html' dist/index.html; then
+  echo "ERROR: dist/index.html missing DOCTYPE";
+  exit 1
 fi
 
-echo "OK: dist/index.html looks correct"
+echo "OK: dist/index.html is HTML"
