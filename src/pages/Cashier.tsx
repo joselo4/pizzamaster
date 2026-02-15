@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase, logAction } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { type Order } from '../types';
@@ -7,6 +8,7 @@ import { DollarSign, Printer, CreditCard, Banknote, Loader2, Armchair, X } from 
 
 export default function Cashier() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
@@ -93,7 +95,7 @@ export default function Cashier() {
         <h2 className="text-xl font-black text-white flex items-center gap-2">
             <DollarSign className="text-green-500" /> CAJA <span className="text-sm text-gray-500">({orders.length} pendientes)</span>
         </h2>
-            <a href="/cashier/history" className="rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700">Historial</a>
+            <button type="button" onClick={() => navigate('/cashier/history')} className="rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700">Historial</button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 content-start pb-40">

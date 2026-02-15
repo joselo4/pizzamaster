@@ -12,6 +12,3 @@ with check (
   and (path is null or char_length(path) <= 200)
   and (promo_code is null or char_length(promo_code) <= 64)
 );
-
-create index if not exists promo_events_event_campaign_created_idx
-on public.promo_events (event, campaign_id, created_at desc);

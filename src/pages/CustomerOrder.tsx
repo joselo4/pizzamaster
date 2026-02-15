@@ -6,7 +6,7 @@ import type { CartItem, Product, ServiceType } from '../types';
 import { canSendRequest, markSent } from '../lib/rateLimit';
 import { createOrderRequest, fetchConfigMap } from '../lib/orderRequests';
 import { ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza } from 'lucide-react';
-import { logPedidoVisit, logOrderRequest } from '../lib/promoCampaigns';
+import { logPedidoVisit } from '../lib/promoCampaigns';
 
 function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
@@ -53,8 +53,8 @@ useEffect(() => {
 
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [category, setCategory] = useState<string>('Pizzas');
-  const [pedidoDefaultCategory, setPedidoDefaultCategory] = useState<string>('Pizzas');
+  const [category, setCategory] = useState<string>('Promo');
+  const [pedidoDefaultCategory, setPedidoDefaultCategory] = useState<string>('Promo');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -86,8 +86,8 @@ useEffect(() => {
   const [error, setError] = useState<string>('');
 
   // ✅ Envío por defecto (configurable): S/ 2.00
-  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(40);
-  const [deliveryFee, setDeliveryFee] = useState<number>(2);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(25);
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
 
   const [trackInput, setTrackInput] = useState('');
   const [promoCode, setPromoCode] = useState<string>('');
@@ -98,6 +98,7 @@ useEffect(() => {
     let onFocus: any;
     let onVis: any;
     let configChannel: any;
+    let pollId: any;
 
     const loadProducts = async () => {
       try {
@@ -124,14 +125,26 @@ useEffect(() => {
       try {
         const c: any = await fetchConfigMap();
 
-        const est = Number(c.tiempo_estimado_min || c.estimated_minutes || 40);
-        setEstimatedMinutes(Number.isFinite(est) ? est : 40);
+        // ⏱️ Tiempo estimado (keys: tiempo_estimado_min / estimated_minutes). Default: 25
+        const estRaw = (c.tiempo_estimado_min ?? c.estimated_minutes ?? null);
+        const estNum = estRaw === '' || estRaw === null || estRaw === undefined ? 25 : Number(estRaw);
+        setEstimatedMinutes(Number.isFinite(estNum) ? estNum : 25);
 
-        const df = Number(c.pedido_costo_delivery || c.pedido_delivery_fee || c.costo_delivery || c.delivery_fee || 2);
-        setDeliveryFee(Number.isFinite(df) ? df : 2);
+        // 🚚 Costo de delivery (keys usadas por AdminPedidoEnvio): costo_delivery / delivery_fee. Default: 0
+        const feeRaw = (c.costo_delivery ?? c.delivery_fee ?? c.pedido_costo_delivery ?? c.pedido_delivery_fee ?? null);
+        let feeNum = feeRaw === '' || feeRaw === null || feeRaw === undefined ? 0 : Number(feeRaw);
+        if (!Number.isFinite(feeNum)) feeNum = 0;
 
-        const defCat = String(c.pedido_default_category || 'Pizzas');
-        setPedidoDefaultCategory(defCat);
+        // En el admin, "Delivery gratis" = costo_delivery=0 (no hay flag separado).
+        // Si en tu instalación existe flag, también lo respetamos.
+        const freeFlag = String(c.delivery_gratis ?? c.pedido_delivery_gratis ?? c.free_delivery ?? '').toLowerCase();
+        if (freeFlag === 'true' || freeFlag === '1' || freeFlag === 'si' || freeFlag === 'sí') feeNum = 0;
+
+        setDeliveryFee(feeNum);
+
+        // Categoría por defecto
+        const defCat = String(c.pedido_default_category ?? 'Promo');
+        setPedidoDefaultCategory(defCat || 'Promo');
       } catch {
         // ignore
       }
@@ -144,17 +157,15 @@ useEffect(() => {
 
     void loadAll();
 
-    onFocus = () => { void loadConfig(); void loadProducts(); };
+    onFocus = () => { void loadConfig(); };
     window.addEventListener('focus', onFocus);
 
     onVis = () => {
-      if (document.visibilityState === 'visible') {
-        void loadConfig();
-        void loadProducts();
-      }
+      if (document.visibilityState === 'visible') void loadConfig();
     };
     document.addEventListener('visibilitychange', onVis);
 
+    // Realtime config (si está habilitado)
     try {
       configChannel = supabase
         .channel('config-realtime')
@@ -166,10 +177,18 @@ useEffect(() => {
       // ignore
     }
 
+    // Polling respaldo (1s) para que siempre se refleje el cambio
+    try {
+      pollId = window.setInterval(() => { void loadConfig(); }, 1000);
+    } catch {
+      pollId = null;
+    }
+
     return () => {
       try { window.removeEventListener('focus', onFocus); } catch {}
       try { document.removeEventListener('visibilitychange', onVis); } catch {}
       try { if (configChannel) supabase.removeChannel(configChannel); } catch {}
+      try { if (pollId) window.clearInterval(pollId); } catch {}
     };
   }, []);
 
@@ -179,7 +198,7 @@ useEffect(() => {
   products.forEach(p => set.add(p.category || 'Otros'));
 
   // Tabs fijos (los existentes) + nuevo tab Promo
-  const fixed = ['Pizzas', 'Promo', 'Bebidas', 'Extras', 'Todos'];
+  const fixed = ['Promo', 'Pizzas', 'Bebidas', 'Extras', 'Todos'];
   const dynamic = Array.from(set)
     .filter(c => !fixed.includes(c))
     .sort((a, b) => String(a).localeCompare(String(b)));
@@ -268,17 +287,7 @@ useEffect(() => {
         customer_name: name.trim() || undefined,
         phone: cleanPhone,
         address: serviceType === 'Delivery' ? address.trim() : undefined,
-        notes: (()=>{ const base=(notes||'').trim();
-
-      // Conversión por campaña/promo (sin PII)
-      try {
-        const p2 = new URLSearchParams(location.search);
-        const ref = String(p2.get('ref') || '').trim() || null;
-        const path2 = `${location.pathname}${location.search}`;
-        const pc = (promoCode || '').trim() || null;
-        if (ref) void logOrderRequest(ref, null, path2, pc);
-      } catch {}
- const p=(promoCode||'').trim(); if(!p) return base||undefined; const tag=`PROMO:${p}`; if(base.toUpperCase().includes(tag.toUpperCase())) return base||undefined; return (base? `${tag} | ${base}` : tag); })(),
+        notes: (()=>{ const base=(notes||'').trim(); const p=(promoCode||'').trim(); if(!p) return base||undefined; const tag=`PROMO:${p}`; if(base.toUpperCase().includes(tag.toUpperCase())) return base||undefined; return (base? `${tag} | ${base}` : tag); })(),
         items: cart,
         estimated_total: total,
         delivery_fee: serviceType === 'Delivery' ? deliveryFee : 0,

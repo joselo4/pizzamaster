@@ -161,14 +161,13 @@ export async function syncLegacyPromoKeys(primary: PromoCampaign) {
   if (error) throw error;
 }
 
-async function logEvent(event: 'view' | 'pedido_visit' | 'order_request', campaignId: string, ref?: string | null, path?: string, promoCode?: string | null) {
+async function logEvent(event: 'view' | 'pedido_visit', campaignId: string, ref?: string | null, path?: string) {
   try {
     const payload = {
       event,
       campaign_id: String(campaignId).slice(0,64),
       ref: ref ? String(ref).slice(0,64) : null,
-      path: path ? String(path).slice(0,200) : null,
-      promo_code: promoCode ? String(promoCode).slice(0,64) : null
+      path: path ? String(path).slice(0,200) : null
     };
     await supabase.from('promo_events').insert(payload);
   } catch {
@@ -177,15 +176,11 @@ async function logEvent(event: 'view' | 'pedido_visit' | 'order_request', campai
 }
 
 export async function logPromoView(campaignId: string, ref?: string | null, path?: string) {
-  return logEvent('view', campaignId, ref, path, null);
+  return logEvent('view', campaignId, ref, path);
 }
 
 export async function logPedidoVisit(campaignId: string, ref?: string | null, path?: string) {
-  return logEvent('pedido_visit', campaignId, ref, path, null);
-}
-
-export async function logOrderRequest(campaignId: string, ref?: string | null, path?: string, promoCode?: string | null) {
-  return logEvent('order_request', campaignId, ref, path, promoCode ?? null);
+  return logEvent('pedido_visit', campaignId, ref, path);
 }
 
 export async function getPromoEvents(days = 30) {

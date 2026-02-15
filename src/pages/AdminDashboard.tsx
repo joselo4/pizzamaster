@@ -17,9 +17,6 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState<number>(7);
-  const [campaignStats, setCampaignStats] = useState<any[]>([]);
-  const [promoStats, setPromoStats] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -54,23 +51,6 @@ export default function AdminDashboard() {
     })();
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await supabase.rpc('rpc_campaign_stats', { p_days: days });
-        setCampaignStats((data as any[]) || []);
-      } catch {
-        setCampaignStats([]);
-      }
-      try {
-        const { data } = await supabase.rpc('rpc_promo_stats', { p_days: days });
-        setPromoStats((data as any[]) || []);
-      } catch {
-        setPromoStats([]);
-      }
-    })();
-  }, [days]);
-
   const kpis = useMemo(() => {
     const totalOrders = orders.length;
     const revenue = orders.reduce((a: number, o: any) => a + Number(o?.total || 0), 0);
@@ -104,71 +84,7 @@ export default function AdminDashboard() {
             <Card title="Local (24h)" value={kpis.local} />
           </div>
 
-          
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-lg font-black">Estadísticas de campañas (ref)</div>
-                <div className="text-xs text-white/50">view → pedido_visit → order_request</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setDays(7)} className={"rounded-xl px-3 py-2 text-sm border border-white/10 " + (days===7 ? 'bg-white/10' : 'bg-black/30')}>7 días</button>
-                <button onClick={() => setDays(30)} className={"rounded-xl px-3 py-2 text-sm border border-white/10 " + (days===30 ? 'bg-white/10' : 'bg-black/30')}>30 días</button>
-              </div>
-            </div>
-            <div className="mt-3 overflow-x-auto">
-              <table className="min-w-[760px] w-full text-sm">
-                <thead className="text-white/70">
-                  <tr>
-                    <th className="text-left py-2">Campaña</th>
-                    <th className="text-right py-2">Views</th>
-                    <th className="text-right py-2">/pedido</th>
-                    <th className="text-right py-2">Pedidos</th>
-                    <th className="text-right py-2">Conv</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(campaignStats||[]).slice(0,12).map((r:any, i:number) => (
-                    <tr key={i} className="border-t border-white/10">
-                      <td className="py-2 font-semibold">{r.campaign_id}</td>
-                      <td className="py-2 text-right">{r.views}</td>
-                      <td className="py-2 text-right">{r.pedido_visits}</td>
-                      <td className="py-2 text-right">{r.order_requests}</td>
-                      <td className="py-2 text-right">{r.conv_view_to_order}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div>
-              <div className="text-lg font-black">Top Promos (por código)</div>
-              <div className="text-xs text-white/50">Pedidos enviados por promo_code</div>
-            </div>
-            <div className="mt-3 overflow-x-auto">
-              <table className="min-w-[760px] w-full text-sm">
-                <thead className="text-white/70">
-                  <tr>
-                    <th className="text-left py-2">Promo</th>
-                    <th className="text-right py-2">Pedidos</th>
-                    <th className="text-right py-2">Conv</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(promoStats||[]).slice(0,12).map((r:any, i:number) => (
-                    <tr key={i} className="border-t border-white/10">
-                      <td className="py-2 font-semibold">{r.promo_code}</td>
-                      <td className="py-2 text-right">{r.order_requests}</td>
-                      <td className="py-2 text-right">{r.conv_view_to_order}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-<div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-sm font-black">Top eventos</div>
               <ul className="mt-2 space-y-1 text-sm">

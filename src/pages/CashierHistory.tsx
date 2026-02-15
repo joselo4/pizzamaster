@@ -5,20 +5,23 @@ import { type Order } from '../types';
 import { generateTicketPDF } from '../lib/ticket';
 import { Printer, Loader2, ArrowLeft } from 'lucide-react';
 import { logBizEvent } from '../lib/observability';
+import { useNavigate } from 'react-router-dom';
 
 export default function CashierHistory() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [ticketConfig, setTicketConfig] = useState<any>({});
   const [rows, setRows] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [err, setErr] = useState<string>('');
 
   useEffect(() => {
     supabase.from('config').select('*').then(({ data }) => {
       const c: any = {};
-      data?.forEach((row: any) => (c[row.key] = row.numeric_value || row.text_value));
+      data?.forEach((row: any) => (c[row.key] = row.numeric_value ?? row.text_value));
       setTicketConfig(c);
     });
   }, []);
@@ -33,49 +36,52 @@ export default function CashierHistory() {
     show_notes: String(ticketConfig.show_notes) !== 'false',
     show_client: String(ticketConfig.show_client) !== 'false',
     logo_url: ticketConfig.logo_url,
-    facebook: ticketConfig.facebook,
-    instagram: ticketConfig.instagram,
-    tiktok: ticketConfig.tiktok,
-    wifi_pass: ticketConfig.wifi_pass,
-    website: ticketConfig.website,
-    extra_socials: ticketConfig.extra_socials,
   }), [ticketConfig]);
+
+  const baseQuery = () => {
+    // IMPORTANTE: incluir status null (para no perder registros)
+    return supabase
+      .from('orders')
+      .select('*')
+      .eq('payment_status', 'Pagado')
+      .or('status.is.null,status.neq.Cancelado');
+  };
 
   const fetchHistory = async () => {
     setLoading(true);
+    setErr('');
     try {
-      let query = supabase
-        .from('orders')
-        .select('*')
-        .eq('payment_status', 'Pagado')
-        .neq('status', 'Cancelado')
-        .order('updated_at', { ascending: false });
+      let query = baseQuery();
 
-      if (dateFrom) {
-        const fromIso = new Date(dateFrom + 'T00:00:00').toISOString();
-        query = query.gte('created_at', fromIso);
-      }
-      if (dateTo) {
-        const toIso = new Date(dateTo + 'T23:59:59.999').toISOString();
-        query = query.lte('created_at', toIso);
-      }
+      if (dateFrom) query = query.gte('created_at', new Date(dateFrom + 'T00:00:00').toISOString());
+      if (dateTo) query = query.lte('created_at', new Date(dateTo + 'T23:59:59.999').toISOString());
 
       const term = (q || '').trim();
       if (term) {
         const onlyNum = term.replace(/\D/g, '');
         const asId = Number(onlyNum);
-        if (onlyNum && Number.isFinite(asId) && String(asId).length <= 8) {
-          query = query.eq('id', asId);
-        } else {
-          query = query.or(`client_name.ilike.%${term}%,client_phone.ilike.%${term}%`);
-        }
+        if (onlyNum && Number.isFinite(asId) && String(asId).length <= 8) query = query.eq('id', asId);
+        else query = query.or(`client_name.ilike.%${term}%,client_phone.ilike.%${term}%`);
       }
 
-      const { data } = await query.limit(200);
-      setRows((data as any) || []);
+      // 1) intenta ordenar por updated_at, si falla usa created_at
+      let { data, error } = await query.order('updated_at', { ascending: false }).limit(200);
+      if (error) {
+        const r2 = await query.order('created_at', { ascending: false }).limit(200);
+        data = r2.data as any;
+        error = r2.error as any;
+      }
+
+      if (error) {
+        setErr(String(error.message || 'Error consultando historial'));
+        setRows([]);
+      } else {
+        setRows((data as any) || []);
+      }
 
       logBizEvent('cashier.history_search', { dateFrom, dateTo, q: term }, null, user?.username ?? null);
-    } catch {
+    } catch (e: any) {
+      setErr(String(e?.message || e || 'Error consultando historial'));
       setRows([]);
     } finally {
       setLoading(false);
@@ -95,7 +101,6 @@ export default function CashierHistory() {
 
   useEffect(() => {
     logBizEvent('cashier.history_view', {}, null, user?.username ?? null);
-    // carga inicial
     void fetchHistory();
   }, []);
 
@@ -103,9 +108,9 @@ export default function CashierHistory() {
     <div className="flex flex-col h-full bg-dark w-full">
       <div className="p-4 border-b border-gray-800 bg-card shadow-md z-10 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <a href="/cashier" className="p-2 rounded-xl border border-gray-700 text-gray-200 hover:bg-gray-800" title="Volver">
+          <button type="button" onClick={() => navigate('/cashier')} className="p-2 rounded-xl border border-gray-700 text-gray-200 hover:bg-gray-800" title="Volver">
             <ArrowLeft size={18} />
-          </a>
+          </button>
           <div className="text-xl font-black text-white">Historial de Cobros</div>
         </div>
         <button onClick={() => void fetchHistory()} className="rounded-xl border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700">Buscar</button>
@@ -128,6 +133,10 @@ export default function CashierHistory() {
             </div>
           </div>
         </div>
+
+        {err ? (
+          <div className="mt-4 rounded-xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-200">{err}</div>
+        ) : null}
 
         {loading ? (
           <div className="mt-4 text-gray-300 flex items-center gap-2"><Loader2 className="animate-spin"/> Cargando…</div>

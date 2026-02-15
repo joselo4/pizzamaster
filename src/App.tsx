@@ -9,6 +9,7 @@ import POS from './pages/POS';
 import Kitchen from './pages/Kitchen';
 import Delivery from './pages/Delivery';
 import Cashier from './pages/Cashier';
+import CashierHistory from './pages/CashierHistory';
 import Admin from './pages/admin';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -85,6 +86,7 @@ export default function App() {
             <Route path="/kitchen" element={<ProtectedRoute permission="access_kitchen"><Kitchen /></ProtectedRoute>} />
             <Route path="/delivery" element={<ProtectedRoute permission="access_delivery"><Delivery /></ProtectedRoute>} />
             <Route path="/cashier" element={<ProtectedRoute permission="access_cashier"><Cashier /></ProtectedRoute>} />
+            <Route path="/cashier/history" element={<ProtectedRoute permission="access_cashier"><CashierHistory /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute permission="access_admin"><Admin /></ProtectedRoute>} />
             <Route path="/admin/dashboard" element={<ProtectedRoute permission="access_admin"><AdminDashboard /></ProtectedRoute>} />
           </Route>
