@@ -6,7 +6,7 @@ import type { CartItem, Product, ServiceType } from '../types';
 import { canSendRequest, markSent } from '../lib/rateLimit';
 import { createOrderRequest, fetchConfigMap } from '../lib/orderRequests';
 import { ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza } from 'lucide-react';
-import { logPedidoVisit } from '../lib/promoCampaigns';
+import { logPedidoVisit, logOrderRequest } from '../lib/promoCampaigns';
 
 function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
@@ -53,8 +53,8 @@ useEffect(() => {
 
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [category, setCategory] = useState<string>('Pizzas');
-  const [pedidoDefaultCategory, setPedidoDefaultCategory] = useState<string>('Pizzas');
+  const [category, setCategory] = useState<string>('Promo');
+  const [pedidoDefaultCategory, setPedidoDefaultCategory] = useState<string>('Promo');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -86,56 +86,117 @@ useEffect(() => {
   const [error, setError] = useState<string>('');
 
   // ✅ Envío por defecto (configurable): S/ 2.00
-  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(40);
-  const [deliveryFee, setDeliveryFee] = useState<number>(2);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(25);
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
 
   const [trackInput, setTrackInput] = useState('');
   const [promoCode, setPromoCode] = useState<string>('');
 
+  
+
   useEffect(() => {
     let onFocus: any;
     let onVis: any;
-    const load = async () => {
+    let configChannel: any;
+    let pollId: any;
 
-const loadProducts = async () => {
-      await loadProducts();
-
-      await loadConfig();
-
-// ✅ quirúrgico: refrescar config al volver al tab/ventana
-onFocus = () => { loadConfig(); loadProducts(); };
-window.addEventListener('focus', onFocus);
-onVis = () => { if (document.visibilityState === 'visible') { loadConfig(); loadProducts(); } };
-document.addEventListener('visibilitychange', onVis);
-
-      // ✅ Realtime: cuando cambie config, actualiza al instante (tiempo estimado y costo de envío)
-      let configChannel: any;
+    const loadProducts = async () => {
       try {
-        configChannel = supabase
-          .channel('config-realtime')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'config' }, async () => {
-            await loadConfig();
-          })
-          .subscribe();
+        const { data } = await supabase
+          .from('products')
+          .select('*')
+          .eq('active', true);
+
+        const list: any[] = (data || []) as any[];
+        list.sort((a, b) => {
+          const ia = (a.sort_index ?? 1e9);
+          const ib = (b.sort_index ?? 1e9);
+          if (ia !== ib) return ia - ib;
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+
+        setProducts(list as any);
       } catch {
         // ignore
       }
-
     };
-    load();
+
+    const loadConfig = async () => {
+      try {
+        const c: any = await fetchConfigMap();
+
+        // ⏱️ Tiempo estimado (default 25)
+        const estRaw = (c.tiempo_estimado_min ?? c.estimated_minutes ?? null);
+        const estNum = estRaw === '' || estRaw === null || estRaw === undefined ? 25 : Number(estRaw);
+        setEstimatedMinutes(Number.isFinite(estNum) ? estNum : 25);
+
+        // 🚚 Costo delivery (Admin usa costo_delivery/delivery_fee). Default 0
+        const feeRaw = (c.costo_delivery ?? c.delivery_fee ?? c.pedido_costo_delivery ?? c.pedido_delivery_fee ?? null);
+        let feeNum = feeRaw === '' || feeRaw === null || feeRaw === undefined ? 0 : Number(feeRaw);
+        if (!Number.isFinite(feeNum)) feeNum = 0;
+
+        const freeFlag = String(c.delivery_gratis ?? c.pedido_delivery_gratis ?? c.free_delivery ?? '').toLowerCase();
+        if (freeFlag === 'true' || freeFlag === '1' || freeFlag === 'si' || freeFlag === 'sí') feeNum = 0;
+
+        setDeliveryFee(feeNum);
+
+        const defCat = String(c.pedido_default_category ?? 'Promo');
+        setPedidoDefaultCategory(defCat || 'Promo');
+      } catch {
+        // ignore
+      }
+    };
+
+    const loadAll = async () => {
+      await loadProducts();
+      await loadConfig();
+    };
+
+    void loadAll();
+
+    onFocus = () => { void loadConfig(); };
+    window.addEventListener('focus', onFocus);
+
+    onVis = () => {
+      if (document.visibilityState === 'visible') {
+        void loadConfig();
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+
+    try {
+      configChannel = supabase
+        .channel('config-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'config' }, async () => {
+          await loadConfig();
+        })
+        .subscribe();
+    } catch {
+      // ignore
+    }
+
+    // Polling de respaldo (1s)
+    try {
+      pollId = window.setInterval(() => { void loadConfig(); }, 1000);
+    } catch {
+      pollId = null;
+    }
+
     return () => {
       try { window.removeEventListener('focus', onFocus); } catch {}
       try { document.removeEventListener('visibilitychange', onVis); } catch {}
       try { if (configChannel) supabase.removeChannel(configChannel); } catch {}
+      try { if (pollId) window.clearInterval(pollId); } catch {}
     };
   }, []);
+
 
   const categories = useMemo(() => {
   const set = new Set<string>();
   products.forEach(p => set.add(p.category || 'Otros'));
 
   // Tabs fijos (los existentes) + nuevo tab Promo
-  const fixed = ['Pizzas', 'Promo', 'Bebidas', 'Extras', 'Todos'];
+  const fixed = ['Promo', 'Pizzas', 'Bebidas', 'Extras', 'Todos'];
   const dynamic = Array.from(set)
     .filter(c => !fixed.includes(c))
     .sort((a, b) => String(a).localeCompare(String(b)));
