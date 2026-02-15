@@ -184,6 +184,10 @@ export async function logPedidoVisit(campaignId: string, ref?: string | null, pa
   return logEvent('pedido_visit', campaignId, ref, path, null);
 }
 
+export async function logOrderRequest(campaignId: string, ref?: string | null, path?: string, promoCode?: string | null) {
+  return logEvent('order_request', campaignId, ref, path, promoCode ?? null);
+}
+
 export async function getPromoEvents(days = 30) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
@@ -192,8 +196,4 @@ export async function getPromoEvents(days = 30) {
     .gte('created_at', since);
   if (error || !data) return [] as any[];
   return data as any[];
-}
-
-export async function logOrderRequest(campaignId: string, ref?: string | null, path?: string, promoCode?: string | null) {
-  return logEvent('order_request', campaignId, ref, path, promoCode ?? null);
 }

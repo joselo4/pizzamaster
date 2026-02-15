@@ -3,7 +3,6 @@ import { supabase, logAction } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { type Order } from '../types';
 import { generateTicketPDF } from '../lib/ticket';
-import { logBizEvent } from '../lib/observability';
 import { DollarSign, Printer, CreditCard, Banknote, Loader2, Armchair, X } from 'lucide-react';
 
 export default function Cashier() {
@@ -13,12 +12,6 @@ export default function Cashier() {
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [ticketConfig, setTicketConfig] = useState<any>({});
   const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'Pendientes' | 'Historial'>('Pendientes');
-  const [historyOrders, setHistoryOrders] = useState<Order[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [q, setQ] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     supabase.from('config').select('*').then(({ data }) => {
@@ -37,46 +30,6 @@ export default function Cashier() {
       .order('created_at', { ascending: true });
     setOrders(data || []);
   };
-
-  const fetchHistory = async () => {
-    setHistoryLoading(true);
-    try {
-      let query = supabase
-        .from('orders')
-        .select('*')
-        .eq('payment_status', 'Pagado')
-        .neq('status', 'Cancelado')
-        .order('updated_at', { ascending: false });
-
-      if (dateFrom) {
-        const fromIso = new Date(dateFrom + 'T00:00:00').toISOString();
-        query = query.gte('created_at', fromIso);
-      }
-      if (dateTo) {
-        const toIso = new Date(dateTo + 'T23:59:59.999').toISOString();
-        query = query.lte('created_at', toIso);
-      }
-
-      const term = (q || '').trim();
-      if (term) {
-        const onlyNum = term.replace(/\D/g, '');
-        const asId = Number(onlyNum);
-        if (onlyNum && Number.isFinite(asId) && String(asId).length <= 8) {
-          query = query.eq('id', asId);
-        } else {
-          query = query.or(`client_name.ilike.%${term}%,client_phone.ilike.%${term}%`);
-        }
-      }
-
-      const { data } = await query.limit(200);
-      setHistoryOrders((data as any) || []);
-    } catch {
-      setHistoryOrders([]);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
 
   useEffect(() => {
     fetchOrders();
@@ -100,7 +53,6 @@ export default function Cashier() {
         return;
     }
 
-    logBizEvent('order_paid', { method: paymentMethod }, selectedOrder.id, user?.username ?? null);
     logAction(user!.username, 'COBRO', `Orden #${selectedOrder.id} - S/${selectedOrder.total}`, selectedOrder.id);
     setLoading(false);
     setSelectedOrder(null);
@@ -130,7 +82,6 @@ export default function Cashier() {
         extra_socials: ticketConfig.extra_socials // JSON
     };
 
-    logBizEvent('ticket_printed', { source: 'cashier', method }, order.id, user?.username ?? null);
     const blob = await generateTicketPDF(orderToPrint, settings, '--- Ticket ---');
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
@@ -142,14 +93,10 @@ export default function Cashier() {
         <h2 className="text-xl font-black text-white flex items-center gap-2">
             <DollarSign className="text-green-500" /> CAJA <span className="text-sm text-gray-500">({orders.length} pendientes)</span>
         </h2>
-            <div className="flex gap-2">
-              <button onClick={() => setViewMode('Pendientes')} className={"rounded-xl px-3 py-2 text-sm border border-gray-700 " + (viewMode==='Pendientes' ? 'bg-green-600 text-white border-green-500' : 'bg-dark text-gray-300 hover:bg-gray-800')}>Pendientes</button>
-              <button onClick={() => { setViewMode('Historial'); logBizEvent('cashier.history_view', {}, null, user?.username ?? null); void fetchHistory(); }} className={"rounded-xl px-3 py-2 text-sm border border-gray-700 " + (viewMode==='Historial' ? 'bg-green-600 text-white border-green-500' : 'bg-dark text-gray-300 hover:bg-gray-800')}>Historial</button>
-            </div>
+            <a href="/cashier/history" className="rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700">Historial</a>
       </div>
 
-      {viewMode === 'Pendientes' && (
-<div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 content-start pb-40">
+      <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 content-start pb-40">
         {orders.length === 0 && (
             <div className="col-span-full text-center text-gray-500 mt-10">No hay cobros pendientes</div>
         )}
@@ -199,58 +146,7 @@ export default function Cashier() {
         ))}
       </div>
 
-      
-      )}
-
-
-      {viewMode === 'Historial' && (
-        <div className="p-4 pb-40">
-          <div className="rounded-2xl border border-gray-800 bg-card p-4">
-            <div className="flex flex-wrap gap-3 items-end">
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-400">Desde</label>
-                <input type="date" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} className="rounded-xl border border-gray-700 bg-dark px-3 py-2 text-sm text-white" />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-400">Hasta</label>
-                <input type="date" value={dateTo} onChange={(e)=>setDateTo(e.target.value)} className="rounded-xl border border-gray-700 bg-dark px-3 py-2 text-sm text-white" />
-              </div>
-              <div className="flex-1 flex flex-col">
-                <label className="text-xs text-gray-400">Buscar (#id, nombre o teléfono)</label>
-                <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Ej: 1201 o Juan" className="rounded-xl border border-gray-700 bg-dark px-3 py-2 text-sm text-white" />
-              </div>
-              <button onClick={() => { logBizEvent('cashier.history_search', { dateFrom, dateTo, q }, null, user?.username ?? null); void fetchHistory(); }} className="rounded-xl border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700">Buscar</button>
-            </div>
-          </div>
-
-          {historyLoading ? (
-            <div className="mt-4 text-gray-300">Cargando historial…</div>
-          ) : (
-            <div className="mt-4 grid gap-3">
-              {historyOrders.length === 0 ? (
-                <div className="text-gray-400">Sin resultados para los filtros.</div>
-              ) : historyOrders.map((o:any) => (
-                <div key={o.id} className="rounded-2xl border border-gray-800 bg-card p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-black text-lg text-white">#{o.id} <span className="text-xs text-gray-400">({o.payment_method || '—'})</span></div>
-                      <div className="text-white/80 font-semibold">{o.client_name || '—'}</div>
-                      <div className="text-xs text-gray-500">{new Date(o.created_at).toLocaleString()}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-white font-black">S/ {Number(o.total||0).toFixed(2)}</div>
-                      <button onClick={() => void handlePrint(o, o.payment_method || 'Efectivo')} className="mt-2 inline-flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700">
-                        <Printer size={16} /> Reimprimir
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-{selectedOrder && (
+      {selectedOrder && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 animate-in fade-in">
             <div className="bg-card w-full max-w-sm rounded-2xl border border-gray-800 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden relative">
                 <div className="p-4 border-b border-gray-800 bg-gray-900/50 shrink-0 flex justify-between items-center">

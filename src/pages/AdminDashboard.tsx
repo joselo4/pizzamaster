@@ -109,7 +109,7 @@ export default function AdminDashboard() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-lg font-black">Estadísticas de campañas (ref)</div>
-                <div className="text-xs text-white/60">view → pedido_visit → order_request</div>
+                <div className="text-xs text-white/50">view → pedido_visit → order_request</div>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => setDays(7)} className={"rounded-xl px-3 py-2 text-sm border border-white/10 " + (days===7 ? 'bg-white/10' : 'bg-black/30')}>7 días</button>
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(campaignStats||[]).slice(0, 12).map((r:any, i:number) => (
+                  {(campaignStats||[]).slice(0,12).map((r:any, i:number) => (
                     <tr key={i} className="border-t border-white/10">
                       <td className="py-2 font-semibold">{r.campaign_id}</td>
                       <td className="py-2 text-right">{r.views}</td>
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
             <div>
               <div className="text-lg font-black">Top Promos (por código)</div>
-              <div className="text-xs text-white/60">Pedidos enviados por promo_code</div>
+              <div className="text-xs text-white/50">Pedidos enviados por promo_code</div>
             </div>
             <div className="mt-3 overflow-x-auto">
               <table className="min-w-[760px] w-full text-sm">
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(promoStats||[]).slice(0, 12).map((r:any, i:number) => (
+                  {(promoStats||[]).slice(0,12).map((r:any, i:number) => (
                     <tr key={i} className="border-t border-white/10">
                       <td className="py-2 font-semibold">{r.promo_code}</td>
                       <td className="py-2 text-right">{r.order_requests}</td>
