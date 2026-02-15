@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { type Order } from '../types';
 import { generateTicketPDF } from '../lib/ticket';
 import { Printer, Loader2, ArrowLeft } from 'lucide-react';
-import { logBizEvent } from '../lib/observability';
 import { useNavigate } from 'react-router-dom';
 
 export default function CashierHistory() {
@@ -16,7 +15,7 @@ export default function CashierHistory() {
   const [q, setQ] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [err, setErr] = useState<string>('');
+  const [err, setErr] = useState('');
 
   useEffect(() => {
     supabase.from('config').select('*').then(({ data }) => {
@@ -38,20 +37,16 @@ export default function CashierHistory() {
     logo_url: ticketConfig.logo_url,
   }), [ticketConfig]);
 
-  const baseQuery = () => {
-    // IMPORTANTE: incluir status null (para no perder registros)
-    return supabase
-      .from('orders')
-      .select('*')
-      .eq('payment_status', 'Pagado')
-      .or('status.is.null,status.neq.Cancelado');
-  };
-
   const fetchHistory = async () => {
     setLoading(true);
     setErr('');
     try {
-      let query = baseQuery();
+      let query = supabase
+        .from('orders')
+        .select('*')
+        .eq('payment_status', 'Pagado')
+        .or('status.is.null,status.neq.Cancelado')
+        .order('created_at', { ascending: false });
 
       if (dateFrom) query = query.gte('created_at', new Date(dateFrom + 'T00:00:00').toISOString());
       if (dateTo) query = query.lte('created_at', new Date(dateTo + 'T23:59:59.999').toISOString());
@@ -64,24 +59,15 @@ export default function CashierHistory() {
         else query = query.or(`client_name.ilike.%${term}%,client_phone.ilike.%${term}%`);
       }
 
-      // 1) intenta ordenar por updated_at, si falla usa created_at
-      let { data, error } = await query.order('updated_at', { ascending: false }).limit(200);
+      const { data, error } = await query.limit(200);
       if (error) {
-        const r2 = await query.order('created_at', { ascending: false }).limit(200);
-        data = r2.data as any;
-        error = r2.error as any;
-      }
-
-      if (error) {
-        setErr(String(error.message || 'Error consultando historial'));
+        setErr(error.message || 'Error');
         setRows([]);
       } else {
         setRows((data as any) || []);
       }
-
-      logBizEvent('cashier.history_search', { dateFrom, dateTo, q: term }, null, user?.username ?? null);
     } catch (e: any) {
-      setErr(String(e?.message || e || 'Error consultando historial'));
+      setErr(String(e?.message || e));
       setRows([]);
     } finally {
       setLoading(false);
@@ -89,20 +75,12 @@ export default function CashierHistory() {
   };
 
   const handleReprint = async (order: Order) => {
-    try {
-      logBizEvent('ticket_printed', { source: 'cashier_history', method: order.payment_method }, order.id, user?.username ?? null);
-      const blob = await generateTicketPDF(order, settings as any, '--- Ticket ---');
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-    } catch {
-      // ignore
-    }
+    const blob = await generateTicketPDF(order, settings as any, '--- Ticket ---');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
   };
 
-  useEffect(() => {
-    logBizEvent('cashier.history_view', {}, null, user?.username ?? null);
-    void fetchHistory();
-  }, []);
+  useEffect(() => { void fetchHistory(); }, []);
 
   return (
     <div className="flex flex-col h-full bg-dark w-full">
@@ -134,9 +112,7 @@ export default function CashierHistory() {
           </div>
         </div>
 
-        {err ? (
-          <div className="mt-4 rounded-xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-200">{err}</div>
-        ) : null}
+        {err ? <div className="mt-4 rounded-xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-200">{err}</div> : null}
 
         {loading ? (
           <div className="mt-4 text-gray-300 flex items-center gap-2"><Loader2 className="animate-spin"/> Cargando…</div>

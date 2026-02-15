@@ -111,43 +111,38 @@ useEffect(() => {
         list.sort((a, b) => {
           const ia = (a.sort_index ?? 1e9);
           const ib = (b.sort_index ?? 1e9);
-          if (ia !== ib) return ia - ib;
+          if (ia != ib) return ia - ib;
           return String(a.name || '').localeCompare(String(b.name || ''));
         });
 
         setProducts(list as any);
-      } catch {
-        // ignore
-      }
+      } catch {}
     };
 
     const loadConfig = async () => {
       try {
         const c: any = await fetchConfigMap();
 
-        // ⏱️ Tiempo estimado (keys: tiempo_estimado_min / estimated_minutes). Default: 25
+        // ⏱️ tiempo estimado
         const estRaw = (c.tiempo_estimado_min ?? c.estimated_minutes ?? null);
         const estNum = estRaw === '' || estRaw === null || estRaw === undefined ? 25 : Number(estRaw);
         setEstimatedMinutes(Number.isFinite(estNum) ? estNum : 25);
 
-        // 🚚 Costo de delivery (keys usadas por AdminPedidoEnvio): costo_delivery / delivery_fee. Default: 0
+        // 🚚 costo de envío (AdminPedidoEnvio usa costo_delivery/delivery_fee)
         const feeRaw = (c.costo_delivery ?? c.delivery_fee ?? c.pedido_costo_delivery ?? c.pedido_delivery_fee ?? null);
         let feeNum = feeRaw === '' || feeRaw === null || feeRaw === undefined ? 0 : Number(feeRaw);
         if (!Number.isFinite(feeNum)) feeNum = 0;
 
-        // En el admin, "Delivery gratis" = costo_delivery=0 (no hay flag separado).
-        // Si en tu instalación existe flag, también lo respetamos.
+        // delivery gratis (si existe flag)
         const freeFlag = String(c.delivery_gratis ?? c.pedido_delivery_gratis ?? c.free_delivery ?? '').toLowerCase();
         if (freeFlag === 'true' || freeFlag === '1' || freeFlag === 'si' || freeFlag === 'sí') feeNum = 0;
 
         setDeliveryFee(feeNum);
 
-        // Categoría por defecto
+        // categoría por defecto
         const defCat = String(c.pedido_default_category ?? 'Promo');
         setPedidoDefaultCategory(defCat || 'Promo');
-      } catch {
-        // ignore
-      }
+      } catch {}
     };
 
     const loadAll = async () => {
@@ -165,7 +160,6 @@ useEffect(() => {
     };
     document.addEventListener('visibilitychange', onVis);
 
-    // Realtime config (si está habilitado)
     try {
       configChannel = supabase
         .channel('config-realtime')
@@ -173,16 +167,10 @@ useEffect(() => {
           await loadConfig();
         })
         .subscribe();
-    } catch {
-      // ignore
-    }
+    } catch {}
 
-    // Polling respaldo (1s) para que siempre se refleje el cambio
-    try {
-      pollId = window.setInterval(() => { void loadConfig(); }, 1000);
-    } catch {
-      pollId = null;
-    }
+    // polling cada 1s
+    pollId = window.setInterval(() => { void loadConfig(); }, 1000);
 
     return () => {
       try { window.removeEventListener('focus', onFocus); } catch {}
