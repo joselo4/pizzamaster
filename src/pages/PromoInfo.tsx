@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PromoHero from '../components/promo/PromoHero';
 import { getConfigPromoRaw, loadPromoCampaigns, slugify } from '../lib/promoCampaigns';
+import { setSEO } from '../lib/seo';
 
 function isHttp(url: string) {
   return /^https?:\/\//i.test(url);

@@ -6,7 +6,7 @@ import type { CartItem, Product, ServiceType } from '../types';
 import { canSendRequest, markSent } from '../lib/rateLimit';
 import { createOrderRequest, fetchConfigMap } from '../lib/orderRequests';
 import { ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza } from 'lucide-react';
-import { logPedidoVisit } from '../lib/promoCampaigns';
+import { logPedidoVisit, logOrderRequest } from '../lib/promoCampaigns';
 
 function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
@@ -39,8 +39,22 @@ export default function CustomerOrder() {
     } catch {}
   }, [location.search]);
 
+// ✅ Si vienes desde /promo con ?promo=CODIGO, enfoca la tab Promo y adjunta el código al pedido
+useEffect(() => {
+  try {
+    const params = new URLSearchParams(location.search);
+    const p = String(params.get('promo') || '').trim();
+    if (p) {
+      setPromoCode(p);
+      setCategory('Promo');
+    }
+  } catch {}
+}, [location.search]);
+
+
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<string>('Pizzas');
+  const [pedidoDefaultCategory, setPedidoDefaultCategory] = useState<string>('Pizzas');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -76,56 +90,89 @@ export default function CustomerOrder() {
   const [deliveryFee, setDeliveryFee] = useState<number>(2);
 
   const [trackInput, setTrackInput] = useState('');
+  const [promoCode, setPromoCode] = useState<string>('');
+
+  
 
   useEffect(() => {
     let onFocus: any;
     let onVis: any;
-    const load = async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('active', true)
-        .order('name', { ascending: true });
-      if (error) {
-        console.error(error);
-        setProducts([] as any);
-      } else {
-        const list:any[] = (data || []) as any[];
+    let configChannel: any;
+
+    const loadProducts = async () => {
+      try {
+        const { data } = await supabase
+          .from('products')
+          .select('*')
+          .eq('active', true);
+
+        const list: any[] = (data || []) as any[];
         list.sort((a, b) => {
           const ia = (a.sort_index ?? 1e9);
           const ib = (b.sort_index ?? 1e9);
           if (ia !== ib) return ia - ib;
           return String(a.name || '').localeCompare(String(b.name || ''));
         });
+
         setProducts(list as any);
+      } catch {
+        // ignore
       }
-
-const loadConfig = async () => {
-  try {
-    const c = await fetchConfigMap();
-    const est = Number(c.tiempo_estimado_min || c.estimated_minutes || 40);
-    setEstimatedMinutes(Number.isFinite(est) ? est : 40);
-    const df = Number(c.costo_delivery || c.delivery_fee || 2);
-    setDeliveryFee(Number.isFinite(df) ? df : 2);
-  } catch {
-    // defaults
-  }
-};
-
-await loadConfig();
-
-// ✅ quirúrgico: refrescar config al volver al tab/ventana
-onFocus = () => { loadConfig(); };
-window.addEventListener('focus', onFocus);
-onVis = () => { if (document.visibilityState === 'visible') loadConfig(); };
-document.addEventListener('visibilitychange', onVis);
     };
-    load();
+
+    const loadConfig = async () => {
+      try {
+        const c: any = await fetchConfigMap();
+
+        const est = Number(c.tiempo_estimado_min || c.estimated_minutes || 40);
+        setEstimatedMinutes(Number.isFinite(est) ? est : 40);
+
+        const df = Number(c.pedido_costo_delivery || c.pedido_delivery_fee || c.costo_delivery || c.delivery_fee || 2);
+        setDeliveryFee(Number.isFinite(df) ? df : 2);
+
+        const defCat = String(c.pedido_default_category || 'Pizzas');
+        setPedidoDefaultCategory(defCat);
+      } catch {
+        // ignore
+      }
+    };
+
+    const loadAll = async () => {
+      await loadProducts();
+      await loadConfig();
+    };
+
+    void loadAll();
+
+    onFocus = () => { void loadConfig(); void loadProducts(); };
+    window.addEventListener('focus', onFocus);
+
+    onVis = () => {
+      if (document.visibilityState === 'visible') {
+        void loadConfig();
+        void loadProducts();
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+
+    try {
+      configChannel = supabase
+        .channel('config-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'config' }, async () => {
+          await loadConfig();
+        })
+        .subscribe();
+    } catch {
+      // ignore
+    }
+
     return () => {
       try { window.removeEventListener('focus', onFocus); } catch {}
       try { document.removeEventListener('visibilitychange', onVis); } catch {}
+      try { if (configChannel) supabase.removeChannel(configChannel); } catch {}
     };
   }, []);
+
 
   const categories = useMemo(() => {
   const set = new Set<string>();
@@ -221,7 +268,17 @@ document.addEventListener('visibilitychange', onVis);
         customer_name: name.trim() || undefined,
         phone: cleanPhone,
         address: serviceType === 'Delivery' ? address.trim() : undefined,
-        notes: notes.trim() || undefined,
+        notes: (()=>{ const base=(notes||'').trim();
+
+      // Conversión por campaña/promo (sin PII)
+      try {
+        const p2 = new URLSearchParams(location.search);
+        const ref = String(p2.get('ref') || '').trim() || null;
+        const path2 = `${location.pathname}${location.search}`;
+        const pc = (promoCode || '').trim() || null;
+        if (ref) void logOrderRequest(ref, null, path2, pc);
+      } catch {}
+ const p=(promoCode||'').trim(); if(!p) return base||undefined; const tag=`PROMO:${p}`; if(base.toUpperCase().includes(tag.toUpperCase())) return base||undefined; return (base? `${tag} | ${base}` : tag); })(),
         items: cart,
         estimated_total: total,
         delivery_fee: serviceType === 'Delivery' ? deliveryFee : 0,
@@ -305,6 +362,10 @@ document.addEventListener('visibilitychange', onVis);
             <div className="sticky top-24 space-y-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-sm font-black">Datos del pedido</div>
+                <div className="mt-2 flex items-center gap-2">
+                  <button type="button" onClick={async ()=>{ try{ await fetchConfigMap().then((c:any)=>{ const est=Number(c.tiempo_estimado_min||c.estimated_minutes||40); setEstimatedMinutes(Number.isFinite(est)?est:40); const df=Number(c.pedido_costo_delivery||c.pedido_delivery_fee||c.costo_delivery||c.delivery_fee||2); setDeliveryFee(Number.isFinite(df)?df:2); }); }catch{} }} className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs hover:bg-white/10">Refrescar</button>
+                  {promoCode && <span className="text-[11px] text-orange-200">Promo: <span className="font-black">{promoCode}</span></span>}
+                </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setServiceType('Delivery')} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${serviceType==='Delivery' ? 'border-orange-500 bg-orange-500/15 text-orange-200' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>Delivery</button>
                   <button type="button" onClick={() => setServiceType('Local')} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${serviceType==='Local' ? 'border-orange-500 bg-orange-500/15 text-orange-200' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>Local</button>

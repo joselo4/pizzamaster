@@ -8,6 +8,9 @@ const KEY_EST_MIN_2 = 'estimated_minutes';
 const KEY_NOTICE_ENABLED = 'customer_notice_enabled';
 const KEY_NOTICE_TEXT = 'customer_notice_text';
 
+// /pedido: categoría inicial
+const KEY_PEDIDO_DEFAULT_CATEGORY = 'pedido_default_category';
+
 function pickNumberFromConfig(map: Record<string, any>, ...keys: string[]) {
   for (const k of keys) {
     const n = Number(map?.[k]);
@@ -31,6 +34,7 @@ export default function AdminPedidoSettings() {
   const [storePhone, setStorePhone] = useState<string>('');
   const [storeAddress, setStoreAddress] = useState<string>('');
   const [ticketFooter, setTicketFooter] = useState<string>('');
+  const [pedidoDefaultCategory, setPedidoDefaultCategory] = useState<string>('Pizzas');
 
   const [products, setProducts] = useState<any[]>([]);
   const [q, setQ] = useState('');
@@ -105,6 +109,7 @@ export default function AdminPedidoSettings() {
         { key: 'telefono_tienda', text_value: storePhone || '' },
         { key: 'direccion_tienda', text_value: storeAddress || '' },
         { key: 'footer_ticket', text_value: ticketFooter || '' },
+        { key: KEY_PEDIDO_DEFAULT_CATEGORY, text_value: pedidoDefaultCategory || 'Pizzas' },
       ];
 
       const { error } = await supabase.from('config').upsert(updates, { onConflict: 'key' });
@@ -159,6 +164,24 @@ export default function AdminPedidoSettings() {
 
       <div className="bg-card border border-white/10 rounded-2xl p-4">
         <AdminPedidoEnvio />
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="font-extrabold">/pedido: categoría inicial</div>
+          <div className="mt-3 grid md:grid-cols-2 gap-4">
+            <div>
+              <div className="text-sm font-bold">Categoría inicial en /pedido</div>
+              <select className="mt-1 w-full rounded-xl border border-white/15 bg-transparent px-3 py-2" value={pedidoDefaultCategory} onChange={(e) => setPedidoDefaultCategory(e.target.value)} >
+                <option value="Pizzas">Pizzas</option>
+                <option value="Promo">Promo</option>
+                <option value="Bebidas">Bebidas</option>
+                <option value="Extras">Extras</option>
+                <option value="Todos">Todos</option>
+              </select>
+              <div className="text-[11px] text-white/60 mt-1">config.{KEY_PEDIDO_DEFAULT_CATEGORY}</div>
+            </div>
+            <div className="text-sm text-white/60">Se aplica al abrir /pedido.</div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-card border border-white/10 rounded-2xl p-4 space-y-4">

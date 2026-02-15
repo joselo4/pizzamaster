@@ -10,6 +10,7 @@ import Kitchen from './pages/Kitchen';
 import Delivery from './pages/Delivery';
 import Cashier from './pages/Cashier';
 import Admin from './pages/admin';
+import AdminDashboard from './pages/AdminDashboard';
 
 import CustomerOrder from './pages/CustomerOrder';
 import Validation from './pages/Validation';
@@ -85,6 +86,7 @@ export default function App() {
             <Route path="/delivery" element={<ProtectedRoute permission="access_delivery"><Delivery /></ProtectedRoute>} />
             <Route path="/cashier" element={<ProtectedRoute permission="access_cashier"><Cashier /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute permission="access_admin"><Admin /></ProtectedRoute>} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute permission="access_admin"><AdminDashboard /></ProtectedRoute>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/pedido" replace />} />

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Phone, MessageCircle, Pizza, Sparkles, Flame, Truck, BadgeCheck, ChevronDown } from 'lucide-react';
 import { getConfigCache, refreshConfigCache } from '../lib/configCache';
+import { setSEO } from '../lib/seo';
 import { slugify } from '../lib/promoCampaigns';
 
 const DEFAULT_PHONE = '+51989466466';
@@ -28,6 +29,16 @@ export default function Promo() {
   const isCarlosQR = q.get('ref')?.toLowerCase() === 'carlos';
 
   const [cfg, setCfg] = useState<any>(() => getConfigCache());
+
+
+useEffect(() => {
+  try {
+    const title = String((cfg?.promo_headline || cfg?.headline || 'Promo'));
+    const desc = String((cfg?.promo_body || cfg?.body || 'Pide tu promo.'));
+    setSEO({ title, description: desc });
+  } catch {}
+}, [cfg]);
+
   useEffect(() => {
     refreshConfigCache().then(setCfg).catch(() => {});
   }, []);

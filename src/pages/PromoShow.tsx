@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { setSEO } from '../lib/seo';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getPromotionBySlug, type Promotion } from '../lib/promos';
 import { Phone, MessageCircle, BadgeCheck, Sparkles, Timer, Pizza } from 'lucide-react';
