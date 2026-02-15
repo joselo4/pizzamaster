@@ -106,15 +106,13 @@ useEffect(() => {
           .from('products')
           .select('*')
           .eq('active', true);
-
         const list: any[] = (data || []) as any[];
         list.sort((a, b) => {
           const ia = (a.sort_index ?? 1e9);
           const ib = (b.sort_index ?? 1e9);
-          if (ia != ib) return ia - ib;
+          if (ia !== ib) return ia - ib;
           return String(a.name || '').localeCompare(String(b.name || ''));
         });
-
         setProducts(list as any);
       } catch {}
     };
@@ -123,23 +121,20 @@ useEffect(() => {
       try {
         const c: any = await fetchConfigMap();
 
-        // ⏱️ tiempo estimado
         const estRaw = (c.tiempo_estimado_min ?? c.estimated_minutes ?? null);
         const estNum = estRaw === '' || estRaw === null || estRaw === undefined ? 25 : Number(estRaw);
         setEstimatedMinutes(Number.isFinite(estNum) ? estNum : 25);
 
-        // 🚚 costo de envío (AdminPedidoEnvio usa costo_delivery/delivery_fee)
+        // AdminPedidoEnvio usa costo_delivery / delivery_fee
         const feeRaw = (c.costo_delivery ?? c.delivery_fee ?? c.pedido_costo_delivery ?? c.pedido_delivery_fee ?? null);
         let feeNum = feeRaw === '' || feeRaw === null || feeRaw === undefined ? 0 : Number(feeRaw);
         if (!Number.isFinite(feeNum)) feeNum = 0;
 
-        // delivery gratis (si existe flag)
         const freeFlag = String(c.delivery_gratis ?? c.pedido_delivery_gratis ?? c.free_delivery ?? '').toLowerCase();
         if (freeFlag === 'true' || freeFlag === '1' || freeFlag === 'si' || freeFlag === 'sí') feeNum = 0;
 
         setDeliveryFee(feeNum);
 
-        // categoría por defecto
         const defCat = String(c.pedido_default_category ?? 'Promo');
         setPedidoDefaultCategory(defCat || 'Promo');
       } catch {}
@@ -155,9 +150,7 @@ useEffect(() => {
     onFocus = () => { void loadConfig(); };
     window.addEventListener('focus', onFocus);
 
-    onVis = () => {
-      if (document.visibilityState === 'visible') void loadConfig();
-    };
+    onVis = () => { if (document.visibilityState === 'visible') void loadConfig(); };
     document.addEventListener('visibilitychange', onVis);
 
     try {
@@ -169,7 +162,6 @@ useEffect(() => {
         .subscribe();
     } catch {}
 
-    // polling cada 1s
     pollId = window.setInterval(() => { void loadConfig(); }, 1000);
 
     return () => {

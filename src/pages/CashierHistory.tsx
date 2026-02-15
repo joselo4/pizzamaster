@@ -61,7 +61,7 @@ export default function CashierHistory() {
 
       const { data, error } = await query.limit(200);
       if (error) {
-        setErr(error.message || 'Error');
+        setErr(error.message || 'Error consultando historial');
         setRows([]);
       } else {
         setRows((data as any) || []);
@@ -75,9 +75,11 @@ export default function CashierHistory() {
   };
 
   const handleReprint = async (order: Order) => {
-    const blob = await generateTicketPDF(order, settings as any, '--- Ticket ---');
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    try {
+      const blob = await generateTicketPDF(order, settings as any, '--- Ticket ---');
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch {}
   };
 
   useEffect(() => { void fetchHistory(); }, []);
