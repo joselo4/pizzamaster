@@ -5,8 +5,9 @@ import { supabase } from '../lib/supabase';
 import type { CartItem, Product, ServiceType } from '../types';
 import { canSendRequest, markSent } from '../lib/rateLimit';
 import { createOrderRequest, fetchConfigMap } from '../lib/orderRequests';
+import { fetchPedidoConfigMap } from '../lib/pedidoConfig';
 import { ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza } from 'lucide-react';
-import { logPedidoVisit, logOrderRequest } from '../lib/promoCampaigns';
+import { logPedidoVisit } from '../lib/promoCampaigns';
 
 function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
@@ -100,11 +101,23 @@ useEffect(() => {
     let configChannel: any;
     let pollId: any;
 
+    // Cache en memoria para reducir PostgREST egress
+    const cache: any = (window as any).__PEDIDO_CACHE__ || ((window as any).__PEDIDO_CACHE__ = { cfgAt: 0, cfg: null, prodAt: 0, prod: null });
+    const CFG_TTL = 60_000; // 60s
+    const PROD_TTL = 5 * 60_000; // 5 min
+
     const loadProducts = async () => {
       try {
+        const now = Date.now();
+        if (cache.prod && (now - cache.prodAt) < PROD_TTL) {
+          setProducts(cache.prod);
+          return;
+        }
+
+        // ✅ incluir is_promo para que el tab Promo funcione
         const { data } = await supabase
           .from('products')
-          .select('*')
+          .select('id,name,price,category,active,sort_index,is_promo')
           .eq('active', true);
 
         const list: any[] = (data || []) as any[];
@@ -115,33 +128,44 @@ useEffect(() => {
           return String(a.name || '').localeCompare(String(b.name || ''));
         });
 
+        cache.prod = list;
+        cache.prodAt = now;
         setProducts(list as any);
       } catch {
         // ignore
       }
     };
 
+    const applyConfig = (c: any) => {
+      const estRaw = (c.tiempo_estimado_min ?? c.estimated_minutes ?? null);
+      const estNum = estRaw === '' || estRaw === null || estRaw === undefined ? 25 : Number(estRaw);
+      setEstimatedMinutes(Number.isFinite(estNum) ? estNum : 25);
+
+      const feeRaw = (c.costo_delivery ?? c.delivery_fee ?? null);
+      let feeNum = feeRaw === '' || feeRaw === null || feeRaw === undefined ? 0 : Number(feeRaw);
+      if (!Number.isFinite(feeNum)) feeNum = 0;
+
+      const freeFlag = String(c.delivery_gratis ?? c.pedido_delivery_gratis ?? c.free_delivery ?? '').toLowerCase();
+      if (freeFlag === 'true' || freeFlag === '1' || freeFlag === 'si' || freeFlag === 'sí') feeNum = 0;
+
+      setDeliveryFee(feeNum);
+
+      const defCat = String(c.pedido_default_category ?? 'Promo');
+      setPedidoDefaultCategory(defCat || 'Promo');
+    };
+
     const loadConfig = async () => {
       try {
-        const c: any = await fetchConfigMap();
+        const now = Date.now();
+        if (cache.cfg && (now - cache.cfgAt) < CFG_TTL) {
+          applyConfig(cache.cfg);
+          return;
+        }
 
-        // ⏱️ Tiempo estimado (default 25)
-        const estRaw = (c.tiempo_estimado_min ?? c.estimated_minutes ?? null);
-        const estNum = estRaw === '' || estRaw === null || estRaw === undefined ? 25 : Number(estRaw);
-        setEstimatedMinutes(Number.isFinite(estNum) ? estNum : 25);
-
-        // 🚚 Costo delivery (Admin usa costo_delivery/delivery_fee). Default 0
-        const feeRaw = (c.costo_delivery ?? c.delivery_fee ?? c.pedido_costo_delivery ?? c.pedido_delivery_fee ?? null);
-        let feeNum = feeRaw === '' || feeRaw === null || feeRaw === undefined ? 0 : Number(feeRaw);
-        if (!Number.isFinite(feeNum)) feeNum = 0;
-
-        const freeFlag = String(c.delivery_gratis ?? c.pedido_delivery_gratis ?? c.free_delivery ?? '').toLowerCase();
-        if (freeFlag === 'true' || freeFlag === '1' || freeFlag === 'si' || freeFlag === 'sí') feeNum = 0;
-
-        setDeliveryFee(feeNum);
-
-        const defCat = String(c.pedido_default_category ?? 'Promo');
-        setPedidoDefaultCategory(defCat || 'Promo');
+        const c: any = await fetchPedidoConfigMap();
+        cache.cfg = c;
+        cache.cfgAt = now;
+        applyConfig(c);
       } catch {
         // ignore
       }
@@ -157,17 +181,15 @@ useEffect(() => {
     onFocus = () => { void loadConfig(); };
     window.addEventListener('focus', onFocus);
 
-    onVis = () => {
-      if (document.visibilityState === 'visible') {
-        void loadConfig();
-      }
-    };
+    onVis = () => { if (document.visibilityState === 'visible') void loadConfig(); };
     document.addEventListener('visibilitychange', onVis);
 
+    // Realtime config (si está habilitado)
     try {
       configChannel = supabase
         .channel('config-realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'config' }, async () => {
+          cache.cfgAt = 0;
           await loadConfig();
         })
         .subscribe();
@@ -175,9 +197,9 @@ useEffect(() => {
       // ignore
     }
 
-    // Polling de respaldo (1s)
+    // Polling respaldo: 60s
     try {
-      pollId = window.setInterval(() => { void loadConfig(); }, 1000);
+      pollId = window.setInterval(() => { void loadConfig(); }, 60_000);
     } catch {
       pollId = null;
     }

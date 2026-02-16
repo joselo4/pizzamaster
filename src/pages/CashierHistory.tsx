@@ -1,24 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
 import { type Order } from '../types';
 import { generateTicketPDF } from '../lib/ticket';
 import { Printer, Loader2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function CashierHistory() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [ticketConfig, setTicketConfig] = useState<any>({});
-  const [rows, setRows] = useState<Order[]>([]);
+  const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [pageSize, setPageSize] = useState<number>(50);
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    supabase.from('config').select('*').then(({ data }) => {
+    supabase.from('config').select('key,numeric_value,text_value').then(({ data }) => {
       const c: any = {};
       data?.forEach((row: any) => (c[row.key] = row.numeric_value ?? row.text_value));
       setTicketConfig(c);
@@ -43,7 +42,7 @@ export default function CashierHistory() {
     try {
       let query = supabase
         .from('orders')
-        .select('*')
+        .select('id,created_at,client_name,total,payment_method,payment_status,status')
         .eq('payment_status', 'Pagado')
         .or('status.is.null,status.neq.Cancelado')
         .order('created_at', { ascending: false });
@@ -56,10 +55,10 @@ export default function CashierHistory() {
         const onlyNum = term.replace(/\D/g, '');
         const asId = Number(onlyNum);
         if (onlyNum && Number.isFinite(asId) && String(asId).length <= 8) query = query.eq('id', asId);
-        else query = query.or(`client_name.ilike.%${term}%,client_phone.ilike.%${term}%`);
+        else query = query.or(`client_name.ilike.%${term}%`);
       }
 
-      const { data, error } = await query.limit(200);
+      const { data, error } = await query.limit(pageSize);
       if (error) {
         setErr(error.message || 'Error consultando historial');
         setRows([]);
@@ -74,15 +73,28 @@ export default function CashierHistory() {
     }
   };
 
-  const handleReprint = async (order: Order) => {
+  const handleReprint = async (row: any) => {
     try {
-      const blob = await generateTicketPDF(order, settings as any, '--- Ticket ---');
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', row.id)
+        .single();
+
+      if (error) throw error;
+
+      const blob = await generateTicketPDF(data as unknown as Order, settings as any, '--- Ticket ---');
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
-    } catch {}
+    } catch (e: any) {
+      setErr(String(e?.message || e || 'No se pudo reimprimir'));
+    }
   };
 
-  useEffect(() => { void fetchHistory(); }, []);
+  useEffect(() => {
+    void fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageSize]);
 
   return (
     <div className="flex flex-col h-full bg-dark w-full">
@@ -108,8 +120,17 @@ export default function CashierHistory() {
               <input type="date" value={dateTo} onChange={(e)=>setDateTo(e.target.value)} className="rounded-xl border border-gray-700 bg-dark px-3 py-2 text-sm text-white" />
             </div>
             <div className="flex-1 flex flex-col min-w-[240px]">
-              <label className="text-xs text-gray-400">Buscar (#id, nombre o teléfono)</label>
+              <label className="text-xs text-gray-400">Buscar (#id o nombre)</label>
               <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Ej: 1201 o Juan" className="rounded-xl border border-gray-700 bg-dark px-3 py-2 text-sm text-white" />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-xs text-gray-400">Filas</label>
+              <select value={pageSize} onChange={(e)=>setPageSize(Number(e.target.value))} className="rounded-xl border border-gray-700 bg-dark px-3 py-2 text-sm text-white">
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={150}>150</option>
+                <option value={200}>200</option>
+              </select>
             </div>
           </div>
         </div>
