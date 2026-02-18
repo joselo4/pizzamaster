@@ -17,6 +17,8 @@ import CustomerOrder from './pages/CustomerOrder';
 import Validation from './pages/Validation';
 import Track from './pages/Track';
 import Promo from './pages/Promo';
+import Promos from './pages/Promos';
+import PromoShow from './pages/PromoShow';
 import PromoInfo from './pages/PromoInfo';
 
 import MobileLayout from './components/MobileLayout';
@@ -74,6 +76,8 @@ export default function App() {
           <Route path="/track" element={<Track />} />
           <Route path="/track/:token" element={<Track />} />
           <Route path="/promo" element={<Promo />} />
+        <Route path="/promos" element={<Promos />} />
+        <Route path="/promo/:slug" element={<PromoShow />} />
         <Route path="/promo/:id" element={<PromoInfo />} />
 
           {/* Público: Login operador */}

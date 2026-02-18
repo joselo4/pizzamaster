@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { setSEO } from '../lib/seo';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getPromotionBySlug, type Promotion } from '../lib/promos';
 import { Phone, MessageCircle, BadgeCheck, Sparkles, Timer, Pizza } from 'lucide-react';
@@ -11,12 +10,25 @@ export default function PromoShow() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setP(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     getPromotionBySlug(slug)
       .then(setP)
       .catch(() => setP(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Redirección segura: nunca durante render
+  useEffect(() => {
+    if (!loading && !p) {
+      navigate('/promos', { replace: true });
+    }
+  }, [loading, p, navigate]);
 
   const waUrl = useMemo(() => {
     if (!p?.wa_number) return '';
@@ -37,8 +49,7 @@ export default function PromoShow() {
   }
 
   if (!p) {
-    navigate('/promos', { replace: true });
-    return null;
+    return <div className="min-h-screen grid place-items-center bg-dark text-white">Redirigiendo…</div>;
   }
 
   return (
@@ -49,6 +60,8 @@ export default function PromoShow() {
           src={p.image_url || '/promos/promo_placeholder_2.svg'}
           alt={p.name}
           className="w-full max-h-[70vh] object-cover"
+          loading="lazy"
+          decoding="async"
         />
         <div className="absolute inset-0 flex items-end">
           <div className="mx-auto w-full max-w-3xl px-4 pb-6">
@@ -87,26 +100,23 @@ export default function PromoShow() {
           {p.detail_text && <div className="mt-1 text-white/80">{p.detail_text}</div>}
         </div>
 
-        {/* Persuasión rápida (si bajan) */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="flex items-center gap-2 font-extrabold"><Timer size={18}/> Lista en minutos</div>
-            <div className="mt-1 text-white/70 text-sm">Rápida, caliente y directa al antojo.</div>
+            <div className="text-white/70 text-sm mt-1">Hecha al momento.</div>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-2 font-extrabold"><Pizza size={18}/> Tamaño ideal</div>
-            <div className="mt-1 text-white/70 text-sm">Perfecta para ti. Sin compartir si no quieres 😄</div>
+            <div className="flex items-center gap-2 font-extrabold"><Pizza size={18}/> Promo real</div>
+            <div className="text-white/70 text-sm mt-1">Ideal para compartir.</div>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-2 font-extrabold"><Sparkles size={18}/> Crunch real</div>
-            <div className="mt-1 text-white/70 text-sm">Masa fina, crujiente y con queso generoso.</div>
+            <div className="flex items-center gap-2 font-extrabold"><BadgeCheck size={18}/> Fácil de pedir</div>
+            <div className="text-white/70 text-sm mt-1">WhatsApp o pedido directo.</div>
           </div>
         </div>
 
-        <div className="mt-6 text-sm text-white/70">
-          <Link to="/promos" className="underline hover:text-white">← Ver todas las promos</Link>
-          <span className="mx-2">•</span>
-          <Link to="/pedido" className="underline hover:text-white">¿No quieres pepperoni? Mira todo el menú.</Link>
+        <div className="mt-6 text-center">
+          <Link to="/promos" className="underline text-white/80 hover:text-white">Volver a Promos</Link>
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import {
   ShoppingBag, Bike, Store, TrendingUp, FileText, MessageCircle, CheckSquare, Square,
   Shield, User as UserIcon, Users, Calendar, Search, Eye, X, Wifi, Globe, Instagram, Facebook, Video, Printer, Hash
 } from 'lucide-react';
+import AdminPromotions from './AdminPromotions';
 import PromoCampaignsManager from '../components/promo/PromoCampaignsManager';
 import AdminPedidoSettings from './AdminPedidoSettings';
 
@@ -328,8 +329,8 @@ setConfig(c);
   return (
     <div className="flex flex-col h-full bg-dark text-white p-2 pb-20">
       <div className="flex gap-2 overflow-x-auto pb-2 mb-2 border-b border-gray-800 no-scrollbar shrink-0">
-        {['dash', 'gestion', 'productos', 'usuarios', 'clientes', 'logs', 'config', 'pedido', 'promo'].map(t => (
-            <button key={t} onClick={() => { setTab(t); setSearchTerm(''); }} className={`px-4 py-2 rounded-lg font-bold capitalize whitespace-nowrap transition-all ${tab === t ? 'bg-orange-600 text-white scale-105' : 'bg-gray-800 text-gray-400'}`}>{t === 'gestion' ? 'Historial' : (t === 'pedido' ? 'Ajustes rápidos' : t)}</button>
+        {['dash', 'gestion', 'productos', 'usuarios', 'clientes', 'logs', 'config', 'pedido', 'promo', 'promos-db'].map(t => (
+            <button key={t} onClick={() => { setTab(t); setSearchTerm(''); }} className={`px-4 py-2 rounded-lg font-bold capitalize whitespace-nowrap transition-all ${tab === t ? 'bg-orange-600 text-white scale-105' : 'bg-gray-800 text-gray-400'}`}>{t === 'gestion' ? 'Historial' : (t === 'pedido' ? 'Ajustes rápidos' : (t === 'promos-db' ? 'Promos DB' : t))}</button>
         ))}
       </div>
 
@@ -355,6 +356,8 @@ setConfig(c);
 
 
 {/* PROMO EDITOR (QUIRÚRGICO): se muestra siempre que tab=promo */}
+{tab === 'promos-db' && (<AdminPromotions />)}
+
 {tab === 'promo' && (
   <div className="space-y-4">
     <div className="flex items-center justify-between gap-3 flex-wrap">
