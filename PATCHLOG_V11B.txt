@@ -1,0 +1,17 @@
+pedidoConfig.ts: added keys pedido_enabled/message + contact
+CustomerOrder.tsx: added refs
+CustomerOrder.tsx: mark promo param ref
+CustomerOrder.tsx: added states for pedidoEnabled/message/contact
+CustomerOrder.tsx: applyConfig reads pedido_enabled/message and applies default category
+CustomerOrder.tsx: category click marks chosen
+CustomerOrder.tsx: submit blocked when disabled
+CustomerOrder.tsx: added full-screen closed overlay
+Promo.tsx: added todayTitle+todayImageUrl
+Promo.tsx: show todayImageUrl image in promo card
+AdminPromoToday.tsx: added module to edit today image/title
+admin.tsx: imported AdminPromoToday
+admin.tsx: added promo-hoy tab
+admin.tsx: labeled promo-hoy
+admin.tsx: renders AdminPromoToday
+admin.tsx: added access_validation permission
+App.tsx: added /pedidos alias

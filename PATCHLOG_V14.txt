@@ -1,0 +1,2 @@
+Replaced escaped quotes (\") in TSX files:
+src/pages/AdminPedidoSettings.tsx

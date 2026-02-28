@@ -1,0 +1,1 @@
+CustomerOrder.tsx: applyConfig now sets storeName/phone/wa

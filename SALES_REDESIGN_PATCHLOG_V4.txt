@@ -1,0 +1,2 @@
+CustomerOrder.tsx: added storeName/storePhone/storeWa states
+CustomerOrder.tsx: replaced hero <h1> with storeName fallback

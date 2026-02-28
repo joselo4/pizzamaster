@@ -73,6 +73,7 @@ export default function App() {
 
           {/* Público: Cliente */}
           <Route path="/pedido" element={<CustomerOrder />} />
+          <Route path="/pedidos" element={<Navigate to="/pedido" replace />} />
           <Route path="/track" element={<Track />} />
           <Route path="/track/:token" element={<Track />} />
           <Route path="/promo" element={<Promo />} />

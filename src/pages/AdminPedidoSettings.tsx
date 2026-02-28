@@ -11,6 +11,16 @@ const KEY_NOTICE_TEXT = 'customer_notice_text';
 // /pedido: categoría inicial
 const KEY_PEDIDO_DEFAULT_CATEGORY = 'pedido_default_category';
 
+// /pedido: ventana de atención
+const KEY_PEDIDO_ENABLED = 'pedido_enabled';
+const KEY_PEDIDO_DISABLED_MSG = 'pedido_disabled_message';
+
+// Contacto global (un solo lugar)
+const KEY_STORE_PHONE = 'telefono_tienda';
+const KEY_PROMO_PHONE = 'promo_phone';
+const KEY_WA_1 = 'promo_wa_number';
+const KEY_WA_2 = 'wa_number';
+
 function pickNumberFromConfig(map: Record<string, any>, ...keys: string[]) {
   for (const k of keys) {
     const n = Number(map?.[k]);
@@ -36,6 +46,10 @@ export default function AdminPedidoSettings() {
   const [ticketFooter, setTicketFooter] = useState<string>('');
   const [pedidoDefaultCategory, setPedidoDefaultCategory] = useState<string>('Pizzas');
 
+  const [pedidoEnabled, setPedidoEnabled] = useState<boolean>(true);
+  const [pedidoDisabledMessage, setPedidoDisabledMessage] = useState<string>('');
+  const [storeWa, setStoreWa] = useState<string>('');
+
   const [products, setProducts] = useState<any[]>([]);
   const [q, setQ] = useState('');
 
@@ -55,7 +69,7 @@ export default function AdminPedidoSettings() {
       if (cfgErr) throw cfgErr;
       const map: Record<string, any> = {};
       (cfgData || []).forEach((r: any) => {
-        map[r.key] = r.text_value ?? r.numeric_value ?? r.bool_value ?? r;
+        map[r.key] = r.text_value ?? r.numeric_value ?? r.num_value ?? r.number_value ?? r.value;
       });
 
       const est = pickNumberFromConfig(map, KEY_EST_MIN_1, KEY_EST_MIN_2) ?? 40;
@@ -110,9 +124,17 @@ export default function AdminPedidoSettings() {
         { key: 'direccion_tienda', text_value: storeAddress || '' },
         { key: 'footer_ticket', text_value: ticketFooter || '' },
         { key: KEY_PEDIDO_DEFAULT_CATEGORY, text_value: pedidoDefaultCategory || 'Pizzas' },
+        { key: KEY_PEDIDO_ENABLED, text_value: pedidoEnabled ? 'true' : 'false' },
+        { key: KEY_PEDIDO_DISABLED_MSG, text_value: pedidoDisabledMessage || '' },
+        { key: KEY_STORE_PHONE, text_value: storePhone || '' },
+        { key: KEY_PROMO_PHONE, text_value: storePhone || '' },
+        { key: KEY_WA_1, text_value: storeWa || '' },
+        { key: KEY_WA_2, text_value: storeWa || '' },
       ];
 
-      const { error } = await supabase.from('config').upsert(updates, { onConflict: 'key' });
+      const dedupedUpdates = Array.from(new Map(updates.map((u: any) => [u.key, u])).values());
+
+      const { error } = await supabase.from('config').upsert(dedupedUpdates, { onConflict: 'key' });
       if (error) throw error;
 
       try { await refreshConfigCache(); } catch {}
@@ -165,6 +187,50 @@ export default function AdminPedidoSettings() {
       <div className="bg-card border border-white/10 rounded-2xl p-4">
         <AdminPedidoEnvio />
 
+        <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="text-lg font-black">Atención / Pedidos</div>
+          <div className="mt-1 text-sm text-white/70">Si desactivas pedidos, /pedido mostrará pantalla completa y bloqueará el envío.</div>
+
+          <div className="mt-4 flex items-center gap-3">
+            <input id="pedido_enabled" name="pedido_enabled" type="checkbox" checked={pedidoEnabled} onChange={(e) => setPedidoEnabled(e.target.checked)} />
+            <label htmlFor="pedido_enabled" className="text-sm font-bold">Pedidos habilitados</label>
+          </div>
+
+          {!pedidoEnabled && (
+            <div className="mt-4">
+              <label htmlFor="pedido_disabled_message" className="text-sm font-bold">Mensaje (aviso personalizado)</label>
+              <textarea id="pedido_disabled_message" name="pedido_disabled_message" value={pedidoDisabledMessage} onChange={(e) => setPedidoDisabledMessage(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm" rows={3} placeholder="Ej: Hoy no atendemos. Volvemos mañana 6pm." />
+            </div>
+          )}
+        
+
+          <div className="mt-4">
+            <button type="button" onClick={saveAjustes} disabled={loading || saving} className="px-4 py-2 rounded-xl bg-orange-600 text-white font-black hover:bg-orange-500 disabled:opacity-50">Guardar Atención/Pedidos</button>
+          </div>
+</div>
+
+        <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="text-lg font-black">Botones globales (Llamar / WhatsApp)</div>
+          <div className="mt-1 text-sm text-white/70">Configura una sola vez y se usará en /pedido (cerrado) y botones públicos.</div>
+
+          <div className="mt-4 grid md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="global_phone" className="text-sm font-bold">Teléfono (Llamar)</label>
+              <input id="global_phone" name="global_phone" value={storePhone} onChange={(e) => setStorePhone(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm" placeholder="+519XXXXXXXX" />
+              <div className="mt-2 text-xs text-white/60">Se guardará en telefono_tienda y promo_phone.</div>
+            </div>
+            <div>
+              <label htmlFor="global_wa" className="text-sm font-bold">WhatsApp (número)</label>
+              <input id="global_wa" name="global_wa" value={storeWa} onChange={(e) => setStoreWa(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm" placeholder="519XXXXXXXX" />
+              <div className="mt-2 text-xs text-white/60">Se guardará en promo_wa_number y wa_number.</div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <button type="button" onClick={saveAjustes} disabled={loading || saving} className="px-4 py-2 rounded-xl bg-orange-600 text-white font-black hover:bg-orange-500 disabled:opacity-50">Guardar botones</button>
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="font-extrabold">/pedido: categoría inicial</div>
           <div className="mt-3 grid md:grid-cols-2 gap-4">
@@ -177,6 +243,9 @@ export default function AdminPedidoSettings() {
                 <option value="Extras">Extras</option>
                 <option value="Todos">Todos</option>
               </select>
+              <div className="mt-3">
+                <button type="button" onClick={saveAjustes} disabled={loading || saving} className="px-4 py-2 rounded-xl bg-orange-600 text-white font-black hover:bg-orange-500 disabled:opacity-50">Guardar categoría inicial</button>
+              </div>
               <div className="text-[11px] text-white/60 mt-1">config.{KEY_PEDIDO_DEFAULT_CATEGORY}</div>
             </div>
             <div className="text-sm text-white/60">Se aplica al abrir /pedido.</div>

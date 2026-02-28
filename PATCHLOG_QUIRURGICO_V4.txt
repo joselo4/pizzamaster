@@ -1,0 +1,29 @@
+App.tsx: added /pedidos alias
+pedidoConfig.ts: added pedido_enabled + pedido_disabled_message
+CustomerOrder.tsx: added states pedidoEnabled/message/didApplyDefaultCategory
+CustomerOrder.tsx: submit blocked when disabled
+CustomerOrder.tsx: added prominent disabled banner
+AdminPedidoSettings.tsx: added pedido_enabled constants
+AdminPedidoSettings.tsx: added states pedidoEnabled/message
+AdminPedidoSettings.tsx: load sets category + enabled/message
+AdminPedidoSettings.tsx: save includes enabled/message
+AdminPedidoSettings.tsx: added Atención/Pedidos UI and save button
+Added AdminPromoToday.tsx
+admin.tsx: imported AdminPromoToday
+admin.tsx: added promo-hoy tab
+admin.tsx: label for promo-hoy
+admin.tsx: renders AdminPromoToday
+admin.tsx: added permission access_validation
+Promos.tsx: added useMemo import
+Promos.tsx: imported config cache
+Promos.tsx: added cfg state
+Promos.tsx: refresh cfg cache on mount
+Promos.tsx: added featured promo logic
+Promos.tsx: inserted featured section UI
+Promo.tsx: imported listActivePromotions
+Promo.tsx: added dbPromos state
+Promo.tsx: added todayTitle/featuredSlug/image override
+Promo.tsx: added featuredPromo
+Promo.tsx: added heroImgUnified
+Promo.tsx: added promosUnified to prefer dbPromos
+vite.config.ts: added dedupe + HMR ws config

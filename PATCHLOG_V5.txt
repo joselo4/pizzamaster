@@ -1,0 +1,17 @@
+pedidoConfig.ts: added pedido_enabled/disabled_message + phone/wa keys
+App.tsx: added /pedidos -> /pedido alias
+CustomerOrder.tsx: imported useRef
+CustomerOrder.tsx: added refs for category selection + promo param
+CustomerOrder.tsx: marks hasPromoParamRef on ?promo
+CustomerOrder.tsx: added pedidoEnabled/message + storePhone/storeWa state
+CustomerOrder.tsx: category tab clicks mark userChosenCategoryRef
+CustomerOrder.tsx: blocks submit when disabled
+CustomerOrder.tsx: added prominent disabled banner with WhatsApp/Llamar
+CustomerOrder.tsx: added mobile sticky CTA bar
+AdminPedidoSettings.tsx: added constants pedido_enabled
+AdminPedidoSettings.tsx: added state pedidoEnabled/message
+AdminPedidoSettings.tsx: load sets category+enabled/message
+AdminPedidoSettings.tsx: save includes enabled/message
+AdminPedidoSettings.tsx: added Atención/Pedidos UI + save button
+admin.tsx: added permission access_validation
+Promo.tsx: added mobile sticky CTA bar

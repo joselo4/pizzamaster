@@ -1,0 +1,5 @@
+/* Mejoras globales de legibilidad al imprimir PECOSA */
+@media print {
+  .pecosa-root { font-size: 12pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pecosa-root, .pecosa-root * { font-weight: 600; color: #000 !important; }
+}

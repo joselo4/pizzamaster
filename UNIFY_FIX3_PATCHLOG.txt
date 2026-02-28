@@ -1,0 +1,23 @@
+Added AdminPromoToday.tsx
+admin.tsx: imported AdminPromoToday
+admin.tsx: added promo-hoy tab
+admin.tsx: label for promo-hoy
+admin.tsx: renders AdminPromoToday
+AdminPedidoSettings: added keys pedido_enabled/message
+AdminPedidoSettings: added state for pedidoEnabled
+AdminPedidoSettings: save includes enabled/message
+AdminPedidoSettings: inserted UI for pedidos enabled
+CustomerOrder: added pedidoEnabled states
+CustomerOrder: submit blocked when disabled
+CustomerOrder: added disabled banner
+Promos.tsx: added useMemo import
+Promos.tsx: imported config cache
+Promos.tsx: added cfg state
+Promos.tsx: refreshes cfg cache on mount
+Promos.tsx: added featured promo logic
+Promos.tsx: inserted featured section UI
+Promo.tsx: imported listActivePromotions
+Promo.tsx: added dbPromos state
+Promo.tsx: added todayTitle + featuredSlug + image override
+Promo.tsx: added featuredPromo
+Promo.tsx: added heroImgUnified

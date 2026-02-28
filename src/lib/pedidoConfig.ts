@@ -9,6 +9,14 @@ const KEYS = [
   'delivery_gratis',
   'pedido_delivery_gratis',
   'free_delivery',
+  // Ventana de atención
+  'pedido_enabled',
+  'pedido_disabled_message',
+  // Botones globales
+  'telefono_tienda',
+  'promo_phone',
+  'promo_wa_number',
+  'wa_number',
 ];
 
 export async function fetchPedidoConfigMap() {

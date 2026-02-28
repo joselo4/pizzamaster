@@ -5,6 +5,7 @@ import { Phone, MessageCircle, Pizza, Sparkles, Flame, Truck, BadgeCheck, Chevro
 import { getConfigCache, refreshConfigCache } from '../lib/configCache';
 import { setSEO } from '../lib/seo';
 import { slugify } from '../lib/promoCampaigns';
+import { listActivePromotions, type Promotion } from '../lib/promos';
 
 const DEFAULT_PHONE = '+51989466466';
 const DEFAULT_WA = '51989466466';
@@ -29,6 +30,7 @@ export default function Promo() {
   const isCarlosQR = q.get('ref')?.toLowerCase() === 'carlos';
 
   const [cfg, setCfg] = useState<any>(() => getConfigCache());
+  const [dbPromos, setDbPromos] = useState<Promotion[]>([]);
 
 
 useEffect(() => {
@@ -45,18 +47,35 @@ useEffect(() => {
 
   const promoActive = String(cfg?.promo_active ?? 'true') !== 'false';
 
+  const todayTitle = String(cfg?.promo_today_title || 'Tu promo de hoy');
+  const todayImageOverride = String(cfg?.promo_today_image_url || '');
+  const featuredSlug = String(cfg?.promo_featured_slug || '');
+
   const badge = cfg?.promo_badge || 'Publicidad chismosa, promo real.';
+
+  const featuredPromo = useMemo(() => {
+    if (!dbPromos || dbPromos.length === 0) return null;
+    const slug = String(featuredSlug || '').trim();
+    return dbPromos.find((p) => String(p.slug) === slug) || dbPromos[0];
+  }, [dbPromos, featuredSlug]);
   const titleA = cfg?.promo_headline || 'Carlos te engaña…';
   const titleB = cfg?.promo_subheadline || 'pero con su dieta.';
 
   const body = cfg?.promo_body || 'Nuestras pizzas son tan buenas que nadie se resiste. Perdona a Carlos y pide tu promo: pizza personal + botellita de chicha por S/10 (delivery gratis hoy).';
 
-  const priceText = cfg?.promo_price_text || 'S/ 10';
-  const detailText = cfg?.promo_detail_text || 'Pizza personal + botellita de chicha (delivery gratis hoy)';
+  const priceText = (featuredPromo?.price_text || cfg?.promo_price_text || 'S/ 10');
+  const detailText = (featuredPromo?.detail_text || cfg?.promo_detail_text || 'Pizza personal + botellita de chicha');
 
-  const ctaLabel = cfg?.promo_cta_label || 'Pedir ahora';
-  const ctaCode = cfg?.promo_cta_code || 'CARLOS10';
+  const ctaLabel = (featuredPromo?.cta_label || cfg?.promo_cta_label || 'Pedir ahora');
+  const ctaCode = (featuredPromo?.cta_code || cfg?.promo_cta_code || 'PROMO');
   const ctaLink = `/pedido?promo=${encodeURIComponent(ctaCode)}`;
+
+  const heroImgUnified = useMemo(() => {
+    const o = String(todayImageOverride || '').trim();
+    if (o) return o;
+    const p = featuredPromo;
+    return (p?.image_url || p?.thumb_url || (isCarlosQR ? '/campaigns/carlos_poster_bw.svg' : '/promos/promo_placeholder_1.svg')) as string;
+  }, [todayImageOverride, featuredPromo, isCarlosQR]);
 
   const phone = cfg?.promo_phone || DEFAULT_PHONE;
   const waNumber = cfg?.promo_wa_number || DEFAULT_WA;
@@ -218,7 +237,10 @@ const promos = useMemo(() => {
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-card p-5">
-              <div className="text-xl font-black">Tu promo de hoy</div>
+              <div className="mb-4 overflow-hidden rounded-2xl border border-white/10">
+                <img src={heroImgUnified} alt="Promo" className="h-48 w-full object-cover" loading="lazy" />
+              </div>
+              <div className="text-xl font-black">{todayTitle}</div>
               <div className="mt-2 text-slate-300">{detailText}</div>
               <div className="mt-4 text-4xl font-black text-emerald-400">{priceText}</div>
               <div className="mt-4 grid grid-cols-2 gap-3">

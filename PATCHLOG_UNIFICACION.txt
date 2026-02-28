@@ -1,0 +1,11 @@
+Promo.tsx: imported listActivePromotions
+Promo.tsx: added dbPromos state
+Promo.tsx: added todayTitle/featuredSlug/image override
+Promo.tsx: added featuredPromo useMemo
+Promo.tsx: added heroImgUnified
+Promo.tsx: added promosUnified
+Promos.tsx: imported config cache
+Promos.tsx: added cfg state
+Promos.tsx: refreshes cfg
+Promos.tsx: added featured logic
+Promos.tsx: inserted featured section

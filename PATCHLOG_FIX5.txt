@@ -1,0 +1,24 @@
+vite.config.ts: added resolve.dedupe + server.hmr host 127.0.0.1
+Added src/pages/AdminPromoToday.tsx
+admin.tsx: imported AdminPromoToday
+admin.tsx: added promo-hoy tab
+admin.tsx: labeled promo-hoy
+admin.tsx: renders AdminPromoToday
+AdminPedidoSettings: added pedido_enabled keys
+AdminPedidoSettings: added pedidoEnabled state
+AdminPedidoSettings: save uses text_value for enabled
+AdminPedidoSettings: inserted UI Atención/Pedidos
+CustomerOrder: added pedidoEnabled state
+CustomerOrder: submit blocked when disabled
+CustomerOrder: added disabled banner
+Promos.tsx: imported useMemo
+Promos.tsx: imported config cache
+Promos.tsx: added cfg state
+Promos.tsx: refreshes cfg
+Promos.tsx: added featured promo section logic
+Promos.tsx: inserted featured UI
+Promo.tsx: imported listActivePromotions
+Promo.tsx: added dbPromos state
+Promo.tsx: added todayTitle/featuredSlug
+Promo.tsx: added featuredPromo selector
+Promo.tsx: added heroImgUnified

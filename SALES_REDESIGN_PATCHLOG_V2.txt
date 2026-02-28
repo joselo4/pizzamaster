@@ -1,0 +1,8 @@
+Promo.tsx: added heroImg variables
+Promo.tsx: inserted hero image in promo card
+Promo.tsx: added conversion FAQ section
+Promos.tsx: added search state + filtered list
+Promos.tsx: inserted search UI
+Promos.tsx: switched to filtered.map
+CustomerOrder.tsx: could not find min-h-screen container for hero
+CustomerOrder.tsx: product card pattern not found for image

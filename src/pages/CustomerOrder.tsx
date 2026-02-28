@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {useNavigate, Link, useLocation} from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { CartItem, Product, ServiceType } from '../types';
@@ -46,6 +46,7 @@ useEffect(() => {
     const params = new URLSearchParams(location.search);
     const p = String(params.get('promo') || '').trim();
     if (p) {
+      hasPromoParamRef.current = true;
       setPromoCode(p);
       setCategory('Promo');
     }
@@ -55,6 +56,8 @@ useEffect(() => {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<string>('Promo');
+  const hasUserChosenCategoryRef = useRef(false);
+  const hasPromoParamRef = useRef(false);
   const [pedidoDefaultCategory, setPedidoDefaultCategory] = useState<string>('Promo');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -92,6 +95,12 @@ useEffect(() => {
 
   const [trackInput, setTrackInput] = useState('');
   const [promoCode, setPromoCode] = useState<string>('');
+
+  // Ventana de atención / botones globales
+  const [pedidoEnabled, setPedidoEnabled] = useState<boolean>(true);
+  const [pedidoDisabledMessage, setPedidoDisabledMessage] = useState<string>('');
+  const [storePhone, setStorePhone] = useState<string>('');
+  const [storeWa, setStoreWa] = useState<string>('');
 
   
 
@@ -152,6 +161,22 @@ useEffect(() => {
 
       const defCat = String(c.pedido_default_category ?? 'Promo');
       setPedidoDefaultCategory(defCat || 'Promo');
+
+      // ✅ Ventana de atención
+      setPedidoEnabled(String(c.pedido_enabled ?? 'true') !== 'false');
+      setPedidoDisabledMessage(String(c.pedido_disabled_message || ''));
+
+      // ✅ Botones globales
+      setStorePhone(String(c.telefono_tienda || c.promo_phone || ''));
+      setStoreWa(String(c.promo_wa_number || c.wa_number || ''));
+
+      // ✅ Categoría inicial (solo si usuario no eligió y no hay ?promo=)
+      try {
+        if (!hasUserChosenCategoryRef.current && !hasPromoParamRef.current) {
+          const dc = String(defCat || '').trim();
+          if (dc) setCategory(dc);
+        }
+      } catch {}
     };
 
     const loadConfig = async () => {
@@ -270,6 +295,7 @@ useEffect(() => {
 
   const submit = async () => {
     setError('');
+    if (!pedidoEnabled) return setError(pedidoDisabledMessage || 'Hoy no estamos atendiendo.');
     if (cart.length === 0) return setError('Agrega al menos un producto.');
 
     // ✅ Teléfono: solo 9 dígitos
@@ -326,6 +352,27 @@ useEffect(() => {
       setLoading(false);
     }
   };
+  // FULLSCREEN_CLOSED
+  if (!pedidoEnabled) {
+    const wa = storeWa ? String(storeWa).replace(/\D/g, '') : '';
+    const tel = storePhone ? String(storePhone) : '';
+    return (
+      <div className="min-h-screen bg-[#0b0b0d] text-white flex items-center justify-center px-4">
+        <div className="w-full max-w-lg rounded-3xl border border-rose-500/30 bg-gradient-to-b from-rose-600/25 via-orange-500/10 to-black/10 p-6 shadow-2xl">
+          <div className="text-3xl font-black text-rose-200">⛔ Pedidos desactivados</div>
+          <div className="mt-3 text-sm text-rose-100/85 whitespace-pre-line">{pedidoDisabledMessage || 'Hoy no atendemos. Vuelve más tarde 🙏'}</div>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <a className="rounded-2xl border border-white/15 bg-white/5 py-3 text-center font-extrabold hover:bg-white/10" href={tel ? `tel:${tel}` : '#'} onClick={(e) => { if (!tel) e.preventDefault(); }}>Llamar</a>
+            <a className="rounded-2xl bg-emerald-600 py-3 text-center font-extrabold hover:bg-emerald-500" href={wa ? `https://wa.me/${wa}` : '#'} target="_blank" rel="noreferrer" onClick={(e) => { if (!wa) e.preventDefault(); }}>WhatsApp</a>
+          </div>
+          <a href="/promo" className="mt-4 block rounded-2xl bg-orange-600 py-3 text-center font-black hover:bg-orange-500">Ver promos</a>
+          <div className="mt-4 text-xs text-white/60">Mensaje editable en Admin → Ajustes rápidos → Atención / Pedidos</div>
+        </div>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="min-h-screen bg-[#0b0b0d] text-white">
@@ -368,7 +415,7 @@ useEffect(() => {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           <div className="lg:col-span-8 xl:col-span-9">
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">{categories.map((c) => (
-              <button key={c} type="button" onClick={() => setCategory(c)} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${category === c ? 'border-orange-500 bg-orange-500/15 text-orange-200' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>{c}</button>
+              <button key={c} type="button" onClick={() => { hasUserChosenCategoryRef.current = true; setCategory(c); }} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${category === c ? 'border-orange-500 bg-orange-500/15 text-orange-200' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>{c}</button>
             ))}</div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((p) => { const q = qtyOf(p.id); return (
               <div key={p.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm transition hover:bg-white/10">
