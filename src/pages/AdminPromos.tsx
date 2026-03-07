@@ -13,6 +13,7 @@ type ConfigPromoCard = {
   promo?: string;
   bullets?: string[];
   info_url?: string | null;
+  image_url?: string | null;
   active?: boolean;
 };
 
@@ -25,6 +26,7 @@ type Row = {
   promo: string;
   bullets: string; // 1 por línea
   info_url: string;
+  image_url: string;
   active: boolean;
 };
 
@@ -39,6 +41,7 @@ const emptyRow = (): Row => ({
   promo: '',
   bullets: '',
   info_url: '',
+  image_url: '',
   active: true,
 });
 
@@ -304,6 +307,10 @@ export default function AdminPromos() {
             <input className="rounded-xl border border-white/15 bg-transparent px-3 py-2" placeholder="Nota (detalle corto)" value={editing.note} onChange={e => setEditing({ ...editing, note: e.target.value })} />
             <textarea className="rounded-xl border border-white/15 bg-transparent px-3 py-2 md:col-span-2" rows={4} placeholder="Bullets (1 por línea)" value={editing.bullets} onChange={e => setEditing({ ...editing, bullets: e.target.value })} />
             <input className="rounded-xl border border-white/15 bg-transparent px-3 py-2 md:col-span-2" placeholder="URL info (opcional)" value={editing.info_url} onChange={e => setEditing({ ...editing, info_url: e.target.value })} />
+            <input className="rounded-xl border border-white/15 bg-transparent px-3 py-2 md:col-span-2" placeholder="URL de imagen (solo se verá al presionar Ver info)" value={(editing as any).image_url || ""} onChange={e => setEditing({ ...editing, image_url: e.target.value })} />
+            {((editing as any).image_url || "").trim() ? (
+              <a href={(editing as any).image_url} target="_blank" rel="noreferrer" className="md:col-span-2 text-sm text-orange-300 hover:text-orange-200 font-bold">Previsualizar imagen ↗</a>
+            ) : null}
             <label className="md:col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.active} onChange={e => setEditing({ ...editing, active: e.target.checked })} /> Activa</label>
           </div>
         </div>

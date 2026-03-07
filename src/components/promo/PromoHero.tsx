@@ -36,6 +36,19 @@ export default function PromoHero({ c }: { c: PromoCampaign }) {
   return (
     <section className="w-full">
       <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${t.bg} p-6 sm:p-10 text-white shadow-lg`}>
+        {c.hero_image ? (
+          <>
+            <img
+              src={c.hero_image}
+              alt={c.headline}
+              className="absolute inset-0 h-full w-full object-cover opacity-35"
+              loading="lazy"
+              decoding="async"
+            />
+            <div className="absolute inset-0 bg-black/45" />
+          </>
+        ) : null}
+
         <div className="max-w-3xl">
           <div className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black ${t.badge}`}>PROMO</div>
 

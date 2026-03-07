@@ -23,12 +23,8 @@ export default function PromoShow() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Redirección segura: nunca durante render
-  useEffect(() => {
-    if (!loading && !p) {
-      navigate('/promos', { replace: true });
-    }
-  }, [loading, p, navigate]);
+  // (quirúrgico) no redirigimos silenciosamente si no existe la promo.
+
 
   const waUrl = useMemo(() => {
     if (!p?.wa_number) return '';
@@ -46,6 +42,21 @@ export default function PromoShow() {
 
   if (loading) {
     return <div className="min-h-screen grid place-items-center bg-dark text-white">Cargando…</div>;
+  }
+
+  if (!p) {
+    return (
+      <div className="min-h-screen bg-dark text-white grid place-items-center px-4">
+        <div className="max-w-lg w-full rounded-3xl bg-card border border-white/10 p-6">
+          <div className="text-2xl font-black">No se encontró la promoción</div>
+          <p className="mt-2 text-white/70">Puede que la promo haya sido desactivada o el enlace esté mal.</p>
+          <div className="mt-5 flex gap-3 flex-wrap">
+            <Link to="/promo" className="rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-2 font-extrabold">Volver</Link>
+            <Link to="/pedido" className="rounded-2xl bg-orange-500 hover:bg-orange-600 px-4 py-2 font-extrabold">Ver menú</Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!p) {

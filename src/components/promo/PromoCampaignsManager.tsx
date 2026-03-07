@@ -32,6 +32,7 @@ export default function PromoCampaignsManager() {
       cta_label: 'Pedir ahora',
       cta_code: '',
       info_url: '',
+      hero_image: '',
       theme: 'amber'
     } as any]));
   };
@@ -106,6 +107,7 @@ export default function PromoCampaignsManager() {
                     <input className={inputCls} value={c.cta_label || ''} onChange={(e) => update(c.id, { cta_label: e.target.value })} placeholder="Texto CTA" />
                     <input className={inputCls} value={c.cta_code || ''} onChange={(e) => update(c.id, { cta_code: e.target.value })} placeholder="Código promo" />
                     <input className={inputCls + ' sm:col-span-2'} value={(c as any).info_url || ''} onChange={(e) => update(c.id, { info_url: e.target.value } as any)} placeholder="URL informativa (https://... o vacío para /promo/<id>)" />
+                    <input className={inputCls + ' sm:col-span-2'} value={(c as any).hero_image || ''} onChange={(e) => update(c.id, { hero_image: e.target.value } as any)} placeholder="Imagen (URL) — se verá en Ver info" />
                     <input className={inputCls} value={c.theme || ''} onChange={(e) => update(c.id, { theme: e.target.value })} placeholder="Tema (amber/rose/indigo/emerald)" />
                     <input className={inputCls} type="number" value={Number(c.priority || 0)} onChange={(e) => update(c.id, { priority: Number(e.target.value) })} placeholder="Prioridad" />
                     <textarea className={inputCls + ' sm:col-span-2'} rows={3} value={c.body || ''} onChange={(e) => update(c.id, { body: e.target.value })} placeholder="Texto vendedor / condiciones" />

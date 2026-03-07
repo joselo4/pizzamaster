@@ -20,6 +20,7 @@ import Promo from './pages/Promo';
 import Promos from './pages/Promos';
 import PromoShow from './pages/PromoShow';
 import PromoInfo from './pages/PromoInfo';
+import AdminPromos from './pages/AdminPromos';
 
 import MobileLayout from './components/MobileLayout';
 import AppIdentityLoader from './components/AppIdentityLoader';
@@ -79,7 +80,7 @@ export default function App() {
           <Route path="/promo" element={<Promo />} />
         <Route path="/promos" element={<Promos />} />
         <Route path="/promo/:slug" element={<PromoShow />} />
-        <Route path="/promo/:id" element={<PromoInfo />} />
+        <Route path="/promo/info/:id" element={<PromoInfo />} />
 
           {/* Público: Login operador */}
           <Route path="/login" element={<Login />} />
@@ -93,6 +94,7 @@ export default function App() {
             <Route path="/cashier" element={<ProtectedRoute permission="access_cashier"><Cashier /></ProtectedRoute>} />
             <Route path="/cashier/history" element={<ProtectedRoute permission="access_cashier"><CashierHistory /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute permission="access_admin"><Admin /></ProtectedRoute>} />
+          <Route path="/admin/promos-cards" element={<ProtectedRoute permission="access_admin"><AdminPromos /></ProtectedRoute>} />
             <Route path="/admin/dashboard" element={<ProtectedRoute permission="access_admin"><AdminDashboard /></ProtectedRoute>} />
           </Route>
 

@@ -293,7 +293,7 @@ const promos = useMemo(() => {
   {(() => {
     const pid = String(p.id || p.promo || slugify(p.title) || i);
     const promoSlug = slugify(pid);
-    const internalInfo = `/promo/${encodeURIComponent(promoSlug)}${pid ? `?ref=${encodeURIComponent(pid)}` : ''}`;
+    const internalInfo = `/promo/info/${encodeURIComponent(pid)}`;
     const info = p.info_url ? String(p.info_url) : '';
     const isExternal = /^https?:\/\//i.test(info);
     const pedido = `/pedido?promo=${encodeURIComponent(p.promo || '')}&ref=${encodeURIComponent(pid)}`;

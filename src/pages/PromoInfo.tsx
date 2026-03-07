@@ -90,6 +90,7 @@ export default function PromoInfo() {
           detail_text: String(card.note || ''),
           cta_label: 'Pedir',
           cta_code: promoCode,
+          hero_image: (card as any).image_url || null,
           theme: 'amber'
         }
       };
