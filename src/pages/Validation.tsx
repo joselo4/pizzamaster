@@ -1,13 +1,39 @@
-
 import { useEffect, useMemo, useState } from 'react';
+import { buildStatusSmsMessage } from '../lib/smsTemplates';
+import { openSmsComposer } from '../lib/smsDevice';
+import { getConfigCache } from '../lib/configCache';
 import { supabase, logAction } from '../lib/supabase';
 import type { CartItem, OrderRequest, Product, ServiceType } from '../types';
 import { approveRequestToOrder, listPendingRequests, setRequestStatus } from '../lib/orderRequests';
 import {CheckCircle2, XCircle, Pencil, Plus, RefreshCw, Search, Filter, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { toTrackCode, officialSolicitudIdFromRequest } from '../lib/trackingCode';
 
 function money(n: number) { return `S/ ${Number(n||0).toFixed(2)}`; }
 
+
+
+// ✅ Quirúrgico: SMS tras aceptar validación (abre compositor del dispositivo)
+function maybeSendValidationSms(params: { phone?: string; clientName?: string; orderId: number; trackingCode?: string; }) {
+  const { phone, clientName, orderId, trackingCode } = params;
+  if (!phone || !orderId) return;
+  try {
+    const ok = window.confirm('¿Enviar SMS al cliente (estado Pendiente)?');
+    if (!ok) return;
+    const cfg = getConfigCache();
+    const storeName = String((cfg as any).nombre_tienda || 'Pizzería');
+    const msg = buildStatusSmsMessage({
+      orderId,
+      status: 'Pendiente',
+      trackingCode: trackingCode || undefined,
+      clientName: clientName || undefined,
+      storeName,
+    });
+    openSmsComposer(String(phone), msg);
+  } catch {
+    // no-op
+  }
+}
 export default function Validation() {
   const { user } = useAuth();
   const [requests, setRequests] = useState<OrderRequest[]>([]);
@@ -121,6 +147,15 @@ export default function Validation() {
         delivery_cost: serviceType==='Delivery' ? deliveryCost : 0,
         service_type: serviceType,
         estimated_minutes: estimatedMinutes,
+      });
+      // SMS tras validación
+      const newOrderId = Number((order as any)?.id || 0);
+      const newTracking = newOrderId ? toTrackCode(newOrderId) : '';
+      maybeSendValidationSms({
+        phone: (selected as any)?.client_phone || (selected as any)?.phone || '',
+        clientName: (selected as any)?.client_name || (selected as any)?.name || '',
+        orderId: newOrderId,
+        trackingCode: newTracking,
       });
 
       logAction(user?.username || 'operador', 'REQUEST_APPROVED', `Aprobó solicitud #${selected.id} -> Orden #${(order as any).id}`, (order as any).id);

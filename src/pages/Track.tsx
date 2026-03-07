@@ -8,43 +8,36 @@ import {
   Package,
   Bike,
   CheckCircle2,
-  Clock,
-  MapPin,
-  Phone,
-  StickyNote,
   RefreshCw,
+  PhoneCall,
+  MessageCircle,
 } from 'lucide-react';
+import { toTrackCode, fromTrackCode, isUuid, toSolicitudId } from '../lib/trackingCode';
+import { fetchPedidoConfigMap } from '../lib/pedidoConfig';
+import { buildWhatsAppLink, STORE_WA_NUMBER } from '../lib/whatsapp';
 
 function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
 }
 
 const MAX_TRACK_HOURS = 72;
+
+function onlyDigits(v: any) {
+  return String(v ?? '').replace(/\D/g, '');
+}
+
+function normalizeTel(v: any) {
+  const raw = String(v ?? '').trim();
+  if (!raw) return '';
+  return raw.startsWith('+') ? `+${onlyDigits(raw)}` : onlyDigits(raw);
+}
+
 function isOlderThanHours(createdAt: string | undefined | null, maxHours: number) {
   if (!createdAt) return false;
   const t = new Date(createdAt).getTime();
   if (!Number.isFinite(t)) return false;
   const age = (Date.now() - t) / (1000 * 60 * 60);
   return age > maxHours;
-}
-
-function fromTrackCode(code: string): number | null {
-  const c = (code || '').trim();
-  if (!c) return null;
-  if (/^\d+$/.test(c)) return Number(c);
-  if (/^[0-9a-zA-Z]+$/.test(c)) {
-    const n = parseInt(c.toLowerCase(), 36);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-}
-
-function isUuid(v: string) {
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test((v||'').trim());
-}
-
-function toTrackCode(id: number) {
-  return Math.max(0, Number(id) || 0).toString(36).toUpperCase();
 }
 
 type StatusTone = 'info' | 'warn' | 'ok' | 'danger';
@@ -131,7 +124,11 @@ function toneClasses(tone?: StatusTone) {
 }
 
 function normalizeStatus(s: any) {
-  return String(s || '').trim().toLowerCase();
+  return String(s || '').trim().toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace('validación', 'validacion')
+    .replace('en horno', 'horno')
+    .replace('en_transporte', 'en transporte');
 }
 
 function buildSteps(serviceType?: string) {
@@ -178,6 +175,27 @@ function estimateStepMinutes(totalMinutes: number | string | null | undefined, s
 export default function Track() {
   const { token } = useParams();
   const navigate = useNavigate();
+
+  // Contacto global (configurable en Admin) para apoyar al cliente desde /track
+  const [storePhone, setStorePhone] = useState<string>('');
+  const [storeWa, setStoreWa] = useState<string>('');
+
+  useEffect(() => {
+    let alive = true;
+    fetchPedidoConfigMap()
+      .then((c) => {
+        if (!alive) return;
+        const phone = String((c as any)?.telefono_tienda ?? (c as any)?.promo_phone ?? '').trim();
+        const wa = String((c as any)?.promo_wa_number ?? (c as any)?.wa_number ?? '').trim();
+        setStorePhone(phone);
+        setStoreWa(wa || STORE_WA_NUMBER);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setStoreWa(STORE_WA_NUMBER);
+      });
+    return () => { alive = false; };
+  }, []);
 
   const [codeInput, setCodeInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -246,46 +264,86 @@ const load = async (opts?: { silent?: boolean }) => {
   if (shouldShowLoading) setLoading(true);
   if (!silent) setError(null);
 
-  try {      // 1) Track estable: id de order_requests
+  try {
+      // 1) Track estable: id de order_requests
       if (numericId !== null) {
         const { data: r, error: e1 } = await supabase.from('order_requests').select('*').eq('id', numericId).single();
         if (!e1 && r) {
-          // No mostrar tracking de solicitudes con más de 72 horas
+          const mapped = (r as any).mapped_order_id;
+          // Si ya existe un pedido (orders) asociado, el tracking NO debe expirar por 72h.
+          if (mapped) {
+            setRequest(r);
+            const { data: o } = await supabase.from('orders').select('*').eq('id', mapped).single();
+            if (o) setOrder(o);
+            else setOrder(null);
+            return;
+          }
+          // Solo aplica ventana de 72h para solicitudes que aún NO fueron atendidas/convertidas.
           if (isOlderThanHours((r as any).created_at, MAX_TRACK_HOURS)) {
             setRequest(null);
             setOrder(null);
             setError('Seguimiento ya no está disponible (máximo 72 horas).');
             return;
           }
+          setError(null);
+
           setRequest(r);
-          const mapped = (r as any).mapped_order_id;
+          setError(null);
+
+          setOrder(null);
+          return;
+        }
+      }
+
+      
+
+      // 2) También permitir buscar por ID de pedido (orders)
+      // (útil cuando el usuario pega la Solicitud/ID del pedido, o un código base36 que corresponde a orders.id)
+      if (numericId !== null) {
+        const { data: o2, error: e2 } = await supabase.from('orders').select('*').eq('id', numericId).single();
+        if (!e2 && o2) {
+          setError(null);
+
+          setOrder(o2);
+          setError(null);
+
+          setRequest(null);
+          return;
+        }
+      }
+
+      // 3) Compat token UUID (public_token)
+      if (isUuid(effective)) {
+        const { data: r2, error: e3 } = await supabase.from('order_requests').select('*').eq('public_token', effective).single();
+        if (!e3 && r2) {
+          const mapped = (r2 as any).mapped_order_id;
+          // Si ya existe pedido asociado, NO expira por 72h.
           if (mapped) {
+            setRequest(r2);
             const { data: o } = await supabase.from('orders').select('*').eq('id', mapped).single();
             if (o) setOrder(o);
+            else setOrder(null);
+            return;
           }
-          return;
-        }
-      }
+          // Solo expira solicitudes no atendidas
+          if (isOlderThanHours((r2 as any).created_at, MAX_TRACK_HOURS)) {
+            setRequest(null);
+            setOrder(null);
+            setError('Seguimiento ya no está disponible (máximo 72 horas).');
+            return;
+          }
+          setError(null);
 
-      // 3) compat token UUID
-      const { data: r2, error: e3 } = await supabase.from('order_requests').select('*').eq('public_token', effective).single();
-      if (!e3 && r2) {
-        // No mostrar tracking de solicitudes con más de 72 horas
-        if (isOlderThanHours((r2 as any).created_at, MAX_TRACK_HOURS)) {
-          setRequest(null);
+          setRequest(r2);
+          setError(null);
+
           setOrder(null);
-          setError('Seguimiento ya no está disponible (máximo 72 horas).');
           return;
         }
-        setRequest(r2);
-        const mapped = (r2 as any).mapped_order_id;
-        if (mapped) {
-          const { data: o } = await supabase.from('orders').select('*').eq('id', mapped).single();
-          if (o) setOrder(o);
-        }
-        return;
       }
 
+      setRequest(null);
+      setOrder(null);
       setError('No encontramos ese código. Revisa e intenta nuevamente.');
     } catch {
       setError('Error al consultar seguimiento.');
@@ -372,7 +430,11 @@ useEffect(() => {
 
   const requestId = request?.id ? Number(request.id) : null;
   const orderId = order?.id ? Number(order.id) : null;
-  const stableId = requestId ?? orderId;
+
+  const createdAt = (order?.created_at ?? request?.created_at) as any;
+  const expired = isOlderThanHours(createdAt, MAX_TRACK_HOURS);
+  const expiredMsg = 'Seguimiento ya no está disponible (máximo 72 horas).';
+  const stableId = orderId ?? requestId;
   const trackCode = stableId !== null ? toTrackCode(stableId) : '';
 
   const status = order?.status || request?.status || '';
@@ -425,7 +487,12 @@ const meta = (norm === 'listo')
   const address = order?.client_address || request?.address || '';
   const notes = order?.notes || request?.notes || '';
 
-  return (
+  
+  const supportTel = storePhone ? `tel:${normalizeTel(storePhone)}` : '';
+  const trackRef = String(token ?? '').trim();
+  const waMsg = `Hola, necesito ayuda con mi pedido. Código: ${trackRef}`.trim();
+  const supportWaHref = storeWa ? buildWhatsAppLink(waMsg, storeWa) : '';
+return (
     <div className="min-h-screen bg-[#0f0f10] text-white">
       <header className="sticky top-0 z-10 bg-[#0f0f10]/90 backdrop-blur border-b border-white/10">
         <div className="max-w-2xl mx-auto p-4 flex items-center justify-between">
@@ -435,6 +502,36 @@ const meta = (norm === 'listo')
           <Link to="/pedido" className="text-sm text-white/70 hover:text-white">Hacer pedido</Link>
         </div>
       </header>
+
+      {(supportTel || supportWaHref) && (
+        <div className="max-w-2xl mx-auto px-4 pt-4">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="text-sm text-white/70 mb-3">¿Necesitas ayuda? Contáctanos:</div>
+            <div className="flex gap-2">
+              {supportTel && (
+                <a
+                  href={supportTel}
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center gap-2"
+                >
+                  <PhoneCall size={18} /> Llamar
+                </a>
+              )}
+              {supportWaHref && (
+                <a
+                  href={supportWaHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 px-4 py-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 flex items-center justify-center gap-2"
+                >
+                  <MessageCircle size={18} /> WhatsApp
+                </a>
+              )}
+            </div>
+            <div className="mt-2 text-xs text-white/50">*Se edita en Admin → Atención/Pedidos (config global).</div>
+          </div>
+        </div>
+      )}
+
 
       <div className="max-w-2xl mx-auto p-4">
         {/* Región accesible para mensajes no intrusivos */}
@@ -488,10 +585,11 @@ const meta = (norm === 'listo')
             <div className={`border rounded-2xl p-4 ${toneClasses(meta.tone)}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-sm text-white/70">Código de seguimiento</div>
-                  <div className="text-2xl font-black tracking-wider">{trackCode}</div>
+                  <div className="text-sm text-white/70">Solicitud (ID)</div>
+                  <div className="text-2xl font-black tracking-wider">{toSolicitudId(stableId)}
+                  <div className="text-xs text-white/70 mt-1">Código corto: <span className="font-mono">{trackCode}</span></div></div>
                 </div>
-                <button onClick={() => copy(trackCode)} className="px-3 py-2 rounded-xl bg-black/20 hover:bg-black/30 flex items-center gap-2 text-sm" type="button">
+                <button onClick={() => copy(toSolicitudId(stableId))} className="px-3 py-2 rounded-xl bg-black/20 hover:bg-black/30 flex items-center gap-2 text-sm" type="button">
                   <ClipboardCopy size={16}/> Copiar
                 </button>
               </div>
@@ -537,24 +635,7 @@ const meta = (norm === 'listo')
               </div>
             </div>
 
-            {/* Datos */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <div className="font-bold mb-2 flex items-center gap-2"><CheckCircle2 size={18}/> Datos del pedido</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-white/80">
-                <div><span className="text-white/60">Cliente:</span> {clientName || '—'}</div>
-                <div className="flex items-center gap-2"><Phone size={16}/> <span className="text-white/60">Tel:</span> {phone || '—'}</div>
-                <div><span className="text-white/60">Tipo:</span> {serviceType || '—'}</div>
-                <div className="flex items-center gap-2"><Clock size={16}/> <span className="text-white/60">Tiempo estimado:</span> {order?.estimated_minutes || request?.estimated_minutes || '—'} min</div>
-                {isDelivery && (
-                  <div className="sm:col-span-2 flex items-start gap-2"><MapPin size={16} className="mt-0.5"/> <span><span className="text-white/60">Dirección:</span> {address || '—'}</span></div>
-                )}
-                {notes && (
-                  <div className="sm:col-span-2 flex items-start gap-2"><StickyNote size={16} className="mt-0.5"/> <span><span className="text-white/60">Notas:</span> {notes}</span></div>
-                )}
-              </div>
-            </div>
-
-            {/* Detalle */}
+                        {/* Detalle */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <div className="font-bold mb-2">Detalle del pedido</div>
               {items.length === 0 ? (

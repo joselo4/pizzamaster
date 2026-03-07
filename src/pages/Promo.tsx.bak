@@ -66,10 +66,6 @@ useEffect(() => {
   const priceText = (featuredPromo?.price_text || cfg?.promo_price_text || 'S/ 10');
   const detailText = (featuredPromo?.detail_text || cfg?.promo_detail_text || 'Pizza personal + botellita de chicha');
 
-  // Overrides SOLO para la card "Tu promo de hoy" (quirúrgico)
-  const priceTextToday  = (String(cfg?.promo_today_price || '').trim() || priceText);
-  const detailTextToday = (String(cfg?.promo_today_detail || '').trim() || detailText);
-
   const ctaLabel = (featuredPromo?.cta_label || cfg?.promo_cta_label || 'Pedir ahora');
   const ctaCode = (featuredPromo?.cta_code || cfg?.promo_cta_code || 'PROMO');
   const ctaLink = `/pedido?promo=${encodeURIComponent(ctaCode)}`;
@@ -245,8 +241,8 @@ const promos = useMemo(() => {
                 <img src={heroImgUnified} alt="Promo" className="h-48 w-full object-cover" loading="lazy" />
               </div>
               <div className="text-xl font-black">{todayTitle}</div>
-              <div className="mt-2 text-slate-300">{detailTextToday}</div>
-              <div className="mt-4 text-4xl font-black text-emerald-400">{priceTextToday}</div>
+              <div className="mt-2 text-slate-300">{detailText}</div>
+              <div className="mt-4 text-4xl font-black text-emerald-400">{priceText}</div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <a className="rounded-2xl border border-white/15 py-3 font-extrabold text-center" href={`tel:${phone}`}>Llamar</a>
                 <a className="rounded-2xl bg-emerald-600 py-3 font-extrabold text-center" href={waUrl} target="_blank" rel="noreferrer">WhatsApp</a>
@@ -292,20 +288,22 @@ const promos = useMemo(() => {
 <div className="mt-5 grid grid-cols-2 gap-2">
   {(() => {
     const pid = String(p.id || p.promo || slugify(p.title) || i);
-    const promoSlug = String(p?.slug || slugify(p?.promo || p?.title || p?.id || p?.name || 'promo'));
-    const internalInfo = `/promo/${encodeURIComponent(promoSlug)}${pid ? `?ref=${encodeURIComponent(pid)}` : ''}`;
+    const internalInfo = `/promo/${encodeURIComponent(pid)}`;
     const info = p.info_url ? String(p.info_url) : '';
     const isExternal = /^https?:\/\//i.test(info);
     const pedido = `/pedido?promo=${encodeURIComponent(p.promo || '')}&ref=${encodeURIComponent(pid)}`;
 
     return (
       <>
-        <>
-        <Link to={internalInfo} className="w-full inline-flex items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-3 font-black">Ver info</Link>
         {isExternal ? (
-          <a href={info} target="_blank" rel="noreferrer" className="w-full inline-flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 px-4 py-2 font-extrabold text-xs">Abrir web externa</a>
-        ) : null}
-      </>
+          <a href={info} target="_blank" rel="noreferrer" className="w-full inline-flex items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-3 font-black">
+            Ver info
+          </a>
+        ) : (
+          <Link to={internalInfo} className="w-full inline-flex items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-3 font-black">
+            Ver info
+          </Link>
+        )}
 
         <Link to={pedido} className="w-full inline-flex items-center justify-center rounded-2xl bg-orange-500 hover:bg-orange-600 px-4 py-3 font-black">
           Pedir

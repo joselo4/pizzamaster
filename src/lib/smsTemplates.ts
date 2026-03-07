@@ -20,14 +20,21 @@ export function buildStatusSmsMessage(params: {
   serviceType?: ServiceType | string;
   trackingCode?: string | number;
   trackingUrl?: string;
+  trackMode?: string;
   clientName?: string;
   storeName?: string;
   etaMin?: number;
 }) {
   const cfg = getConfigCache();
-  const { orderId, status, serviceType, trackingCode, trackingUrl, clientName, storeName, etaMin } = params;
+  const { orderId, status, serviceType, trackingCode, trackingUrl, clientName, storeName, etaMin, trackMode } = params;
 
   const tienda = String(storeName || cfg.nombre_tienda || 'Pizzería');
+
+  const mode = String((trackMode || cfg.sms_track_mode || '')).trim().toLowerCase();
+  const shortCode = trackingCode ?? '';
+  const solicitudId = orderId;
+  const trackValue = mode === 'id' ? String(orderId) : mode === 'url' ? String(trackingUrl || '') : String((trackingCode || trackingUrl || ''));
+
   const nombre = (clientName || '').trim();
 
   const saludoCfg = (cfg.sms_saludo || '').toString().trim();
@@ -95,7 +102,10 @@ export function buildStatusSmsMessage(params: {
     tienda,
     pedido: orderId,
     estado: String(status),
-    track: trackingCode || trackingUrl || '',
+    track: trackValue || '',
+    codigo: shortCode,
+    solicitud_id: solicitudId,
+    tracking_url: trackingUrl || '',
   });
 
   const firma = firmaCfg ? `

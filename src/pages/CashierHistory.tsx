@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { type Order } from '../types';
 import { generateTicketPDF } from '../lib/ticket';
-import { Printer, Loader2, ArrowLeft } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft, Pencil } from 'lucide-react';
+import EditOrderModal from '../components/orders/EditOrderModal';
 import { useNavigate } from 'react-router-dom';
 
 export default function CashierHistory() {
   const navigate = useNavigate();
   const [ticketConfig, setTicketConfig] = useState<any>({});
   const [rows, setRows] = useState<any[]>([]);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editing, setEditing] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -70,6 +73,18 @@ export default function CashierHistory() {
       setRows([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenEdit = async (row: any) => {
+    setErr('');
+    try {
+      const { data, error } = await supabase.from('orders').select('*').eq('id', row.id).single();
+      if (error) throw error;
+      setEditing(data as unknown as Order);
+      setOpenEdit(true);
+    } catch (e: any) {
+      setErr(String(e?.message || e || 'No se pudo abrir edición'));
     }
   };
 
@@ -153,9 +168,15 @@ export default function CashierHistory() {
                   </div>
                   <div className="text-right">
                     <div className="text-white font-black">S/ {Number(o.total||0).toFixed(2)}</div>
-                    <button onClick={() => void handleReprint(o)} className="mt-2 inline-flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700">
-                      <Printer size={16} /> Reimprimir
-                    </button>
+
+                    <div className="mt-2 flex flex-wrap gap-2 justify-end">
+                      <button onClick={() => void handleOpenEdit(o)} className="inline-flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700">
+                        <Pencil size={16} /> Editar
+                      </button>
+                      <button onClick={() => void handleReprint(o)} className="inline-flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700">
+                        <Printer size={16} /> Reimprimir
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -163,6 +184,18 @@ export default function CashierHistory() {
           </div>
         )}
       </div>
+
+
+      {/* Modal de edición de pedido */}
+      <EditOrderModal
+        open={openEdit}
+        onClose={() => setOpenEdit(false)}
+        order={editing}
+        onSaved={() => {
+          setOpenEdit(false);
+          void fetchHistory();
+        }}
+      />
     </div>
   );
 }

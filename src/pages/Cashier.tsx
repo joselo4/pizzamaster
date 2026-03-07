@@ -4,13 +4,16 @@ import { supabase, logAction } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { type Order } from '../types';
 import { generateTicketPDF } from '../lib/ticket';
-import { DollarSign, Printer, CreditCard, Banknote, Loader2, Armchair, X } from 'lucide-react';
+import { DollarSign, Printer, CreditCard, Banknote, Loader2, Armchair, X, Pencil } from 'lucide-react';
+import EditOrderModal from '../components/orders/EditOrderModal';
 
 export default function Cashier() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editing, setEditing] = useState<Order | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [ticketConfig, setTicketConfig] = useState<any>({});
   const [loading, setLoading] = useState(false);
@@ -38,6 +41,11 @@ export default function Cashier() {
     const sub = supabase.channel('cashier').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders).subscribe();
     return () => { supabase.removeChannel(sub); };
   }, []);
+
+  const openEditor = (o: Order) => {
+    setEditing(o);
+    setOpenEdit(true);
+  };
 
   const handlePay = async () => {
     if (!selectedOrder) return;
@@ -197,6 +205,9 @@ export default function Cashier() {
                         {loading ? <Loader2 className="animate-spin"/> : <DollarSign size={24}/>}
                         <span>CONFIRMAR PAGO</span>
                     </button>
+                    <button onClick={() => openEditor(selectedOrder)} className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm border border-gray-700">
+                        <Pencil size={16}/> Editar pedido
+                    </button>
                     <button onClick={() => handlePrint(selectedOrder, paymentMethod)} className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm border border-gray-700">
                         <Printer size={16}/> Solo Ver Ticket
                     </button>
@@ -204,6 +215,20 @@ export default function Cashier() {
             </div>
         </div>
       )}
+
+
+      {/* Modal de edición (no rompe flujo de cobro) */}
+      <EditOrderModal
+        open={openEdit}
+        onClose={() => setOpenEdit(false)}
+        order={editing}
+        onSaved={(u) => {
+          setSelectedOrder(u);
+          setEditing(u);
+          setOpenEdit(false);
+          void fetchOrders();
+        }}
+      />
     </div>
   );
 }

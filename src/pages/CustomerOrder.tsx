@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {useNavigate, Link, useLocation} from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -8,14 +7,10 @@ import { createOrderRequest, fetchConfigMap } from '../lib/orderRequests';
 import { fetchPedidoConfigMap } from '../lib/pedidoConfig';
 import { ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza } from 'lucide-react';
 import { logPedidoVisit } from '../lib/promoCampaigns';
+import { toTrackCode } from '../lib/trackingCode';
 
 function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
-}
-
-function toTrackCode(id: number) {
-  // Código corto y fácil: base36 en mayúsculas (ej: 12345 -> 9IX)
-  return Math.max(0, Number(id) || 0).toString(36).toUpperCase();
 }
 
 function onlyDigits9(v: string) {
@@ -53,7 +48,6 @@ useEffect(() => {
   } catch {}
 }, [location.search]);
 
-
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<string>('Promo');
   const hasUserChosenCategoryRef = useRef(false);
@@ -84,7 +78,6 @@ useEffect(() => {
       }
     })();
   }, []);
-
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -237,7 +230,6 @@ useEffect(() => {
     };
   }, []);
 
-
   const categories = useMemo(() => {
   const set = new Set<string>();
   products.forEach(p => set.add(p.category || 'Otros'));
@@ -343,7 +335,7 @@ useEffect(() => {
       markSent(cleanPhone);
 
       // ✅ Track corto basado en id de order_requests (estable en todas las etapas)
-      navigate(`/track/${req.public_token}`);
+      navigate(`/track/${req.id}`);
 
     } catch (e: any) {
       const msg = e?.message || 'Error al enviar el pedido.';
@@ -371,8 +363,6 @@ useEffect(() => {
       </div>
     );
   }
-
-
 
   return (
     <div className="min-h-screen bg-[#0b0b0d] text-white">

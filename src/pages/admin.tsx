@@ -13,6 +13,25 @@ import AdminPromotions from './AdminPromotions';
 import PromoCampaignsManager from '../components/promo/PromoCampaignsManager';
 import AdminPedidoSettings from './AdminPedidoSettings';
 import AdminPromoToday from './AdminPromoToday';
+import { refreshConfigCache } from '../lib/configCache';
+import DangerZoneDbTools from '../components/DangerZoneDbTools';
+
+// ✅ Defaults visibles para Plantillas SMS (editable).
+// Nota: se guardan cuando presionas GUARDAR CAMBIOS.
+const DEFAULT_SMS_SALUDO = "Hola {cliente} 👋";
+const DEFAULT_SMS_FIRMA = "🍕 {tienda}";
+const DEFAULT_SMS_TEMPLATES = {
+  sms_tpl_pendiente: DEFAULT_SMS_SALUDO + "\n\n✅ Recibimos tu pedido #{pedido}. Ya lo estamos preparando." +
+    "\n🔎 Seguimiento: {track}\n\n" + DEFAULT_SMS_FIRMA,
+  sms_tpl_horno: DEFAULT_SMS_SALUDO + "\n\n🔥 Tu pedido #{pedido} ya está en preparación." +
+    "\n🔎 Seguimiento: {track}\n\n" + DEFAULT_SMS_FIRMA,
+  sms_tpl_listo: DEFAULT_SMS_SALUDO + "\n\n🎉 Tu pedido #{pedido} está LISTO." +
+    "\n🔎 Seguimiento: {track}\n\n" + DEFAULT_SMS_FIRMA,
+  sms_tpl_en_transporte: DEFAULT_SMS_SALUDO + "\n\n🚚 Tu pedido #{pedido} va en camino." +
+    "\n🔎 Seguimiento: {track}\n\n" + DEFAULT_SMS_FIRMA,
+  sms_tpl_entregado: DEFAULT_SMS_SALUDO + "\n\n✅ Pedido #{pedido} entregado. ¡Gracias por elegirnos!" +
+    "\n🔎 Seguimiento: {track}\n\n" + DEFAULT_SMS_FIRMA,
+};
 
 export default function Admin() {
   const { user, isLoading } = useAuth();
@@ -303,9 +322,20 @@ setConfig(c);
           {key: 'promo_wa_number', text_value: String(config.promo_wa_number || '')},
           {key: 'promo_wa_message', text_value: String(config.promo_wa_message || '')},
           {key: 'promo_promos', text_value: String(config.promo_promos || '')},
+          
+          // === SMS Plantillas ===
+          {key: 'sms_saludo', text_value: String(config.sms_saludo || DEFAULT_SMS_SALUDO)},
+          {key: 'sms_firma', text_value: String(config.sms_firma || DEFAULT_SMS_FIRMA)},
+          {key: 'sms_tpl_pendiente', text_value: String(config.sms_tpl_pendiente || DEFAULT_SMS_TEMPLATES.sms_tpl_pendiente)},
+          {key: 'sms_tpl_horno', text_value: String(config.sms_tpl_horno || DEFAULT_SMS_TEMPLATES.sms_tpl_horno)},
+          {key: 'sms_tpl_listo', text_value: String(config.sms_tpl_listo || DEFAULT_SMS_TEMPLATES.sms_tpl_listo)},
+          {key: 'sms_tpl_en_transporte', text_value: String(config.sms_tpl_en_transporte || DEFAULT_SMS_TEMPLATES.sms_tpl_en_transporte)},
+          {key: 'sms_tpl_entregado', text_value: String(config.sms_tpl_entregado || DEFAULT_SMS_TEMPLATES.sms_tpl_entregado)},
 ]; 
-      for (const u of updates) await supabase.from('config').upsert(u); 
+      const { error } = await supabase.from('config').upsert(updates, { onConflict: 'key' });
+      if (error) { console.error(error); return alert('Error guardando configuración: ' + (error.message || error)); }
       logAction(user?.username || 'Admin', 'SAVE_CONFIG', 'Update');
+      await refreshConfigCache();
       
       // NUEVO: Actualizar título y favicon inmediatamente
       if (config.nombre_tienda) document.title = config.nombre_tienda;
@@ -865,39 +895,39 @@ setConfig(c);
                
                <div className="bg-card p-5 rounded-xl border border-gray-800 shadow-lg">
                  <h3 className="font-bold text-lg mb-4 text-green-400 flex items-center gap-2"><MessageCircle size={18}/> Plantillas SMS (personalizable)</h3>
-                 <p className="text-xs text-gray-400 mb-4">Variables disponibles: <span className="text-gray-200">{'{cliente}'}</span>, <span className="text-gray-200">{'{tienda}'}</span>, <span className="text-gray-200">{'{pedido}'}</span>, <span className="text-gray-200">{'{estado}'}</span>, <span className="text-gray-200">{'{track}'}</span>.</p>
+                 <p className="text-xs text-gray-400 mb-4">Variables disponibles: <span className="text-gray-200">{'{cliente}'}</span>, <span className="text-gray-200">{'{tienda}'}</span>, <span className="text-gray-200">{'{pedido}'}</span>, <span className="text-gray-200">{'{estado}'}</span>, <span className="text-gray-200">{'{track}'}</span>, <span className="text-gray-200">{'{codigo}'}</span>, <span className="text-gray-200">{'{solicitud_id}'}</span>, <span className="text-gray-200">{'{tracking_url}'}</span>.</p>
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div>
                      <label className="text-xs text-gray-400 font-bold uppercase">Saludo (sms_saludo)</label>
-                     <input className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_saludo || ''} onChange={e=>setConfig({...config, sms_saludo: e.target.value})} placeholder="Hola {cliente} 👋" />
+                     <input className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_saludo || DEFAULT_SMS_SALUDO} onChange={e=>setConfig({...config, sms_saludo: e.target.value})} placeholder="Hola {cliente} 👋" />
                    </div>
                    <div>
                      <label className="text-xs text-gray-400 font-bold uppercase">Firma (sms_firma)</label>
-                     <input className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_firma || ''} onChange={e=>setConfig({...config, sms_firma: e.target.value})} placeholder="Con cariño, {tienda} 🍕" />
+                     <input className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_firma || DEFAULT_SMS_FIRMA} onChange={e=>setConfig({...config, sms_firma: e.target.value})} placeholder="Con cariño, {tienda} 🍕" />
                    </div>
                  </div>
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                    <div>
                      <label className="text-xs text-gray-400 font-bold uppercase">Pendiente (sms_tpl_pendiente)</label>
-                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_pendiente || ''} onChange={e=>setConfig({...config, sms_tpl_pendiente: e.target.value})} />
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_pendiente || DEFAULT_SMS_TEMPLATES.sms_tpl_pendiente} onChange={e=>setConfig({...config, sms_tpl_pendiente: e.target.value})} />
                    </div>
                    <div>
                      <label className="text-xs text-gray-400 font-bold uppercase">Horno (sms_tpl_horno)</label>
-                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_horno || ''} onChange={e=>setConfig({...config, sms_tpl_horno: e.target.value})} />
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_horno || DEFAULT_SMS_TEMPLATES.sms_tpl_horno} onChange={e=>setConfig({...config, sms_tpl_horno: e.target.value})} />
                    </div>
                    <div>
                      <label className="text-xs text-gray-400 font-bold uppercase">Listo (sms_tpl_listo)</label>
-                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_listo || ''} onChange={e=>setConfig({...config, sms_tpl_listo: e.target.value})} />
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_listo || DEFAULT_SMS_TEMPLATES.sms_tpl_listo} onChange={e=>setConfig({...config, sms_tpl_listo: e.target.value})} />
                    </div>
                    <div>
                      <label className="text-xs text-gray-400 font-bold uppercase">En Transporte (sms_tpl_en_transporte)</label>
-                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_en_transporte || ''} onChange={e=>setConfig({...config, sms_tpl_en_transporte: e.target.value})} />
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_en_transporte || DEFAULT_SMS_TEMPLATES.sms_tpl_en_transporte} onChange={e=>setConfig({...config, sms_tpl_en_transporte: e.target.value})} />
                    </div>
                    <div className="md:col-span-2">
                      <label className="text-xs text-gray-400 font-bold uppercase">Entregado (sms_tpl_entregado)</label>
-                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_entregado || ''} onChange={e=>setConfig({...config, sms_tpl_entregado: e.target.value})} />
+                     <textarea rows={4} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" value={config.sms_tpl_entregado || DEFAULT_SMS_TEMPLATES.sms_tpl_entregado} onChange={e=>setConfig({...config, sms_tpl_entregado: e.target.value})} />
                    </div>
                  </div>
 
@@ -906,7 +936,16 @@ setConfig(c);
 
 <div className="bg-card p-5 rounded-xl border border-yellow-900/30"><h3 className="font-bold text-lg mb-4 text-yellow-400 border-b border-gray-800 pb-2 flex items-center gap-2"><AlertTriangle/> Aviso para clientes</h3><div className="space-y-3"><label className="flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" checked={!!config.customer_notice_enabled} onChange={e => setConfig({...config, customer_notice_enabled: e.target.checked})} />Activar aviso en la página de pedidos</label><textarea rows={3} className="w-full bg-dark p-3 rounded border border-gray-700 mt-1" placeholder="Mensaje visible para el cliente..." value={config.customer_notice_text || ''} onChange={e=>setConfig({...config, customer_notice_text: e.target.value})} /></div></div>
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div className="bg-card p-5 rounded-xl border border-gray-800"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2"><Bike/> Costos</h3><div className="flex gap-4"><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Cerca</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_cerca || 0} onChange={e => setConfig({...config, costo_cerca: Number(e.target.value)})}/></div><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Lejos</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_lejos || 0} onChange={e => setConfig({...config, costo_lejos: Number(e.target.value)})}/></div></div></div><div className="bg-card p-5 rounded-xl border border-blue-900/30 relative overflow-hidden group"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2 flex items-center gap-2"><MessageCircle/> Backup Telegram</h3><div className="space-y-3 relative z-10"><input type="password" placeholder="Bot Token" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_token || ''} onChange={e => setConfig({...config, tg_token: e.target.value})}/><input placeholder="Chat ID" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_chat_id || ''} onChange={e => setConfig({...config, tg_chat_id: e.target.value})}/><button onClick={testTelegramBackup} className="text-xs bg-blue-600/20 hover:bg-blue-600 hover:text-white text-blue-400 px-3 py-1 rounded border border-blue-600 transition-all flex items-center gap-2"><Upload size={12}/> Probar Conexión</button></div></div></div><div className="sticky bottom-4 z-50 flex justify-center mt-6"><button onClick={saveConf} className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105"><Save size={24}/> GUARDAR CAMBIOS</button></div><div className="mt-10 pt-10 border-t border-gray-800 text-center opacity-40 hover:opacity-100 transition-opacity"><button onClick={nukeDb} className="text-red-500 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"><AlertTriangle size={12}/> RESETEAR FÁBRICA</button></div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"><div className="bg-card p-5 rounded-xl border border-gray-800"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2"><Bike/> Costos</h3><div className="flex gap-4"><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Cerca</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_cerca || 0} onChange={e => setConfig({...config, costo_cerca: Number(e.target.value)})}/></div><div className="flex-1"><label className="text-xs text-gray-400 font-bold uppercase">Lejos</label><input type="number" className="w-full bg-dark rounded border border-gray-700 p-3" value={config.costo_lejos || 0} onChange={e => setConfig({...config, costo_lejos: Number(e.target.value)})}/></div></div></div><div className="bg-card p-5 rounded-xl border border-blue-900/30 relative overflow-hidden group"><h3 className="font-bold text-lg mb-4 text-blue-400 border-b border-gray-800 pb-2 flex items-center gap-2"><MessageCircle/> Backup Telegram</h3><div className="space-y-3 relative z-10"><input type="password" placeholder="Bot Token" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_token || ''} onChange={e => setConfig({...config, tg_token: e.target.value})}/><input placeholder="Chat ID" className="w-full bg-dark p-2 rounded border border-gray-700 font-mono text-xs" value={config.tg_chat_id || ''} onChange={e => setConfig({...config, tg_chat_id: e.target.value})}/><button onClick={testTelegramBackup} className="text-xs bg-blue-600/20 hover:bg-blue-600 hover:text-white text-blue-400 px-3 py-1 rounded border border-blue-600 transition-all flex items-center gap-2"><Upload size={12}/> Probar Conexión</button></div>
+<div className="bg-red-950/30 p-5 rounded-xl border border-red-800/60">
+  <h3 className="font-bold text-lg mb-3 text-red-300">Zona de peligro</h3>
+  <p className="text-sm text-red-200/80 mb-4">
+    Acciones quirúrgicas: <b>Descargar Backup Full DB</b>, <b>Eliminar Datos Operativos (Wipe)</b> y <b>Restaurar Backup Full DB</b>.
+    Se realiza en <b>JSON</b> y no elimina el esquema.
+  </p>
+  <DangerZoneDbTools />
+</div>
+</div></div><div className="sticky bottom-4 z-50 flex justify-center mt-6"><button onClick={saveConf} className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105"><Save size={24}/> GUARDAR CAMBIOS</button></div><div className="mt-10 pt-10 border-t border-gray-800 text-center opacity-40 hover:opacity-100 transition-opacity"><button onClick={nukeDb} className="text-red-500 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"><AlertTriangle size={12}/> RESETEAR FÁBRICA</button></div>
              </div>
         )}
       </div>

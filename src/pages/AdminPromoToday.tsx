@@ -6,6 +6,8 @@ import { listAllPromotionsStaff, type Promotion } from '../lib/promos';
 const KEY_TODAY_TITLE = 'promo_today_title';
 const KEY_TODAY_IMAGE = 'promo_today_image_url';
 const KEY_FEATURED_SLUG = 'promo_featured_slug';
+const KEY_TODAY_PRICE = 'promo_today_price';
+const KEY_TODAY_DETAIL = 'promo_today_detail';
 
 function rowsToMap(rows: any[]): Record<string, any> {
   const c: any = {};
@@ -25,6 +27,8 @@ export default function AdminPromoToday() {
   const [todayTitle, setTodayTitle] = useState('Tu promo de hoy');
   const [todayImageUrl, setTodayImageUrl] = useState('');
   const [featuredSlug, setFeaturedSlug] = useState('');
+  const [todayPrice, setTodayPrice] = useState('');
+  const [todayDetail, setTodayDetail] = useState('');
 
   const featuredPromo = useMemo(() => {
     if (!promos?.length) return null;
@@ -54,6 +58,8 @@ export default function AdminPromoToday() {
         setTodayTitle(String(c[KEY_TODAY_TITLE] || 'Tu promo de hoy'));
         setTodayImageUrl(String(c[KEY_TODAY_IMAGE] || ''));
         setFeaturedSlug(String(c[KEY_FEATURED_SLUG] || ''));
+        setTodayPrice(String(c[KEY_TODAY_PRICE] || ''));
+        setTodayDetail(String(c[KEY_TODAY_DETAIL] || ''));
       } catch (e: any) {
         setErr(e?.message || String(e));
       } finally {
@@ -76,6 +82,8 @@ export default function AdminPromoToday() {
         { key: KEY_TODAY_TITLE, text_value: String(todayTitle || '') },
         { key: KEY_TODAY_IMAGE, text_value: String(todayImageUrl || '') },
         { key: KEY_FEATURED_SLUG, text_value: String(featuredSlug || '') },
+        { key: KEY_TODAY_PRICE,  text_value: String(todayPrice || '') },
+        { key: KEY_TODAY_DETAIL, text_value: String(todayDetail || '') },
       ];
       const { error } = await supabase.from('config').upsert(updates, { onConflict: 'key' });
       if (error) throw error;
@@ -129,6 +137,21 @@ export default function AdminPromoToday() {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="grid md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-bold" htmlFor="promo_today_price">Precio de hoy (texto)</label>
+                <input id="promo_today_price" value={todayPrice} onChange={(e) => setTodayPrice(e.target.value)} placeholder="S/ 10" className="mt-1 w-full rounded px-3 py-2 bg-white text-gray-900" />
+              </div>
+              <div>
+                <label className="text-sm font-bold" htmlFor="promo_today_detail">Detalle de hoy</label>
+                <input id="promo_today_detail" value={todayDetail} onChange={(e) => setTodayDetail(e.target.value)} placeholder="Pizza personal + bebida (delivery hoy)" className="mt-1 w-full rounded px-3 py-2 bg-white text-gray-900" />
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-white/60">Si estos campos están vacíos, se usará el precio/detalle de la promo destacada.</div>
+          </div>
+
             <div className="text-sm font-bold">Vista previa</div>
             <div className="mt-3 grid md:grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/10 overflow-hidden">

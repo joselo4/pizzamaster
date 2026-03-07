@@ -1,0 +1,30 @@
+
+*** a/src/App.tsx	2026-03-04
+--- b/src/App.tsx	2026-03-04
+***************
+*** 1,6 ****
+  import { BrowserRouter, Routes, Route } from 'react-router-dom';
+  import Promo from './pages/Promo';
+  import Promos from './pages/Promos';
+  import PromoShow from './pages/PromoShow';
+  // ...otros imports
+--- 1,7 ----
+  import { BrowserRouter, Routes, Route } from 'react-router-dom';
+  import Promo from './pages/Promo';
+  import Promos from './pages/Promos';
+  import PromoShow from './pages/PromoShow';
++ import CashierOrderEditor from './pages/CashierOrderEditor';
+  // ...otros imports
+***************
+*** 20,28 ****
+        <Route path="/promo" element={<Promo />} />
+        <Route path="/promos" element={<Promos />} />
+        <Route path="/promo/:slug" element={<PromoShow />} />
+        {/* ...otras rutas */}
+--- 21,30 ----
+        <Route path="/promo" element={<Promo />} />
+        <Route path="/promos" element={<Promos />} />
+        <Route path="/promo/:slug" element={<PromoShow />} />
++       {/** Caja → Historial → Editor */}
++       <Route path="/cashier/history/edit/:id" element={<CashierOrderEditor />} />
+        {/* ...otras rutas */}
