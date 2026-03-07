@@ -292,7 +292,7 @@ const promos = useMemo(() => {
 <div className="mt-5 grid grid-cols-2 gap-2">
   {(() => {
     const pid = String(p.id || p.promo || slugify(p.title) || i);
-    const promoSlug = String(p?.slug || slugify(p?.promo || p?.title || p?.id || p?.name || 'promo'));
+    const promoSlug = slugify(pid);
     const internalInfo = `/promo/${encodeURIComponent(promoSlug)}${pid ? `?ref=${encodeURIComponent(pid)}` : ''}`;
     const info = p.info_url ? String(p.info_url) : '';
     const isExternal = /^https?:\/\//i.test(info);
@@ -300,12 +300,15 @@ const promos = useMemo(() => {
 
     return (
       <>
-        <>
-        <Link to={internalInfo} className="w-full inline-flex items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-3 font-black">Ver info</Link>
         {isExternal ? (
-          <a href={info} target="_blank" rel="noreferrer" className="w-full inline-flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 px-4 py-2 font-extrabold text-xs">Abrir web externa</a>
-        ) : null}
-      </>
+          <a href={info} target="_blank" rel="noreferrer" className="w-full inline-flex items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-3 font-black">
+            Ver info
+          </a>
+        ) : (
+          <Link to={internalInfo} className="w-full inline-flex items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 px-4 py-3 font-black">
+            Ver info
+          </Link>
+        )}
 
         <Link to={pedido} className="w-full inline-flex items-center justify-center rounded-2xl bg-orange-500 hover:bg-orange-600 px-4 py-3 font-black">
           Pedir
