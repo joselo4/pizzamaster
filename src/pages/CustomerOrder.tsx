@@ -5,7 +5,7 @@ import type { CartItem, Product, ServiceType } from '../types';
 import { canSendRequest, markSent } from '../lib/rateLimit';
 import { createOrderRequest, fetchConfigMap } from '../lib/orderRequests';
 import { fetchPedidoConfigMap } from '../lib/pedidoConfig';
-import { ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza } from 'lucide-react';
+import {ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza, RefreshCw } from 'lucide-react';
 import { logPedidoVisit } from '../lib/promoCampaigns';
 import { toTrackCode } from '../lib/trackingCode';
 
@@ -95,6 +95,24 @@ useEffect(() => {
   const [storePhone, setStorePhone] = useState<string>('');
   const [storeWa, setStoreWa] = useState<string>('');
 
+  // Refresco manual de configuración (no invasivo)
+  const manualRefreshConfig = async () => {
+    try { localStorage.removeItem('pizza_config_cache_v1'); } catch {}
+    try {
+      const cache = (window as any).__PEDIDO_CACHE__;
+      if (cache) { cache.cfgAt = 0; cache.cfg = null; }
+    } catch {}
+    try {
+      const c: any = await fetchPedidoConfigMap();
+      const applyCfg = (window as any).__APPLY_CFG__;
+      if (typeof applyCfg === 'function') applyCfg(c);
+      else window.dispatchEvent(new Event('focus'));
+    } catch {
+      try { window.dispatchEvent(new Event('focus')); } catch {}
+    }
+  };
+
+
   
 
   useEffect(() => {
@@ -152,7 +170,12 @@ useEffect(() => {
 
       setDeliveryFee(feeNum);
 
-      const defCat = String(c.pedido_default_category ?? 'Promo');
+      const defCat = String(
+      c.pedido_default_category ??
+      c.pedido_default_tab ??
+      c.pedido_categoria_inicial ??
+      'Promo'
+    );
       setPedidoDefaultCategory(defCat || 'Promo');
 
       // ✅ Ventana de atención
@@ -160,8 +183,22 @@ useEffect(() => {
       setPedidoDisabledMessage(String(c.pedido_disabled_message || ''));
 
       // ✅ Botones globales
-      setStorePhone(String(c.telefono_tienda || c.promo_phone || ''));
-      setStoreWa(String(c.promo_wa_number || c.wa_number || ''));
+      setStorePhone(String(
+      c.store_phone ??
+      c.pedido_contact_phone ??
+      c.pedido_phone ??
+      c.telefono_tienda ??
+      c.promo_phone ??
+      ''
+    ));
+      setStoreWa(String(
+      c.store_wa ??
+      c.pedido_contact_wa ??
+      c.pedido_wa ??
+      c.promo_wa_number ??
+      c.wa_number ??
+      ''
+    ));
 
       // ✅ Categoría inicial (solo si usuario no eligió y no hay ?promo=)
       try {
@@ -171,6 +208,9 @@ useEffect(() => {
         }
       } catch {}
     };
+
+    // Exponer applyConfig para refresco manual (runtime; no rompe)
+    try { (window as any).__APPLY_CFG__ = applyConfig; } catch {}
 
     const loadConfig = async () => {
       try {
@@ -484,6 +524,21 @@ useEffect(() => {
           </div>
         </div>
       )}
-    </div>
+    
+{import.meta.env?.DEV && (
+  <div className="fixed left-3 top-3 z-40 rounded bg-black/60 px-2 py-1 text-xs text-white">
+    Def: {pedidoDefaultCategory}
+  </div>
+)}
+
+<button
+  type="button"
+  onClick={() => { void manualRefreshConfig(); }}
+  title="Refrescar config"
+  className="fixed bottom-24 right-3 z-40 inline-flex items-center justify-center rounded-full bg-gray-900/85 p-3 text-white shadow-lg hover:bg-gray-800 focus:outline-none"
+>
+  <RefreshCw size={18} />
+</button>
+</div>
   );
 }

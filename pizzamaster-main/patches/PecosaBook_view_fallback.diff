@@ -1,0 +1,36 @@
+
+*** SUGERENCIA DE PARCHE (aplicar manualmente con tu editor) ***
+Archivo: src/modules/reports/PecosaBook.tsx
+
+1) Antes de la query actual a `transactions`, intenta primero la vista `pecosa_export_vw`:
+
+  let rows: any[] = [];
+  try {
+    const { data: vdata, error: vErr } = await supabase
+      .from('pecosa_export_vw')
+      .select('*')
+      .gte('created_at', start)
+      .lte('created_at', endTime.toISOString())
+      .eq('program_id', programId) // PANTBC, PCA, etc.
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (vErr) throw vErr;
+    rows = vdata ?? [];
+  } catch {
+    const { data: tdata, error: tErr } = await supabase
+      .from('transactions')
+      .select('*')
+      .gte('created_at', start)
+      .lte('created_at', endTime.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (tErr) throw tErr;
+    rows = tdata ?? [];
+  }
+
+2) Al render/exportar, cuando la fuente sea la vista, muestra/añade columnas:
+   department, province, district, address, health_center_name, destino_center_name.
+
+3) Excel/PDF: agrega esas propiedades al objeto que envías a XLSX / autoTable cuando `rows` provienen de la vista.
+
+NOTA: este cambio es back-compat; si la vista no existe o falla por RLS, el código vuelve a `transactions`.

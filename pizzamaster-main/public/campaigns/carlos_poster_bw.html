@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cartel CARLOS (Imprimir)</title>
+  <style>
+    body{ margin:0; font-family: Arial, Helvetica, sans-serif; background:#eee; }
+    .sheet{ width: 794px; height:1123px; margin: 0 auto; background:#f7f7f7; display:flex; align-items:center; justify-content:center; }
+    .paper{ width: 714px; height:1020px; background:#fff; border:3px dashed #111; padding:24px; box-sizing:border-box; position:relative; }
+    .tape{ position:absolute; top:-12px; width:180px; height:22px; background:#ddd; opacity:.9; }
+    .t1{ left:20px; transform:rotate(-4deg); }
+    .t2{ right:20px; transform:rotate(5deg); }
+    h1{ margin:0; font-size:44px; font-weight:900; letter-spacing:.2px; }
+    h2{ margin:6px 0 18px; font-size:22px; font-weight:800; }
+    .sub{ font-size:16px; margin:0 0 18px; }
+    .qrbox{ width: 534px; height:534px; border:8px solid #111; margin: 18px auto; display:flex; align-items:center; justify-content:center; position:relative; background:#fff; }
+    .qrbox img{ width:100%; height:100%; object-fit:contain; }
+    .qrhint{ position:absolute; text-align:center; font-weight:800; font-size:22px; background:rgba(255,255,255,.85); padding:8px 12px; }
+    .footer{ margin-top: 18px; }
+    .promo{ font-size:18px; font-weight:900; }
+    .price{ font-size:44px; font-weight:900; }
+    .note{ font-size:14px; }
+    @media print{ body{ background:#fff; } .sheet{ margin:0; } }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="paper">
+      <div class="tape t1"></div>
+      <div class="tape t2"></div>
+
+      <h1>¡CARLOS TE ENGAÑA!</h1>
+      <h2>(Y TE DEJÓ SIN CENA)</h2>
+      <p class="sub"><b>ESCANEA EL QR</b> para ver el chisme completo y reclamar la promo.</p>
+
+      <div class="qrbox">
+        <!-- Reemplaza src por tu QR (que apunte a /promo?ref=carlos) -->
+        <!-- <img src="./TU_QR.png" alt="QR" /> -->
+        <div class="qrhint">PEGA AQUÍ TU QR</div>
+      </div>
+
+      <div class="footer">
+        <div class="promo">PROMO DEL DÍA</div>
+        <div>Pizza personal + bebida</div>
+        <div class="price">S/ 10</div>
+        <div class="note">* Si no carga, entra manual: /promo?ref=carlos</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

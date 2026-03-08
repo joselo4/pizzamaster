@@ -1,0 +1,9 @@
+
+/* styles/no_ellipsis.css */
+.no-ellipsis{
+  white-space: normal;     /* permite envolver */
+  overflow: visible;       /* no recorta */
+  text-overflow: clip;     /* sin puntos */
+  word-break: break-word;  /* quiebra palabras largas */
+  line-height: 1.2;        /* similar a leading-snug */
+}

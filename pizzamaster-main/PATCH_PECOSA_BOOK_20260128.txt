@@ -1,0 +1,2 @@
+FIX – Libro de PECOSAS (MVP)
+Ejecutar pca-main/sql/20260128_pecosa_book_fix.sql en Supabase y recargar schema si se requiere.

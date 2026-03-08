@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -172,7 +173,7 @@ function estimateStepMinutes(totalMinutes: number | string | null | undefined, s
   return mins.map((m, i) => (i === steps.length - 1 ? null : m));
 }
 
-export default function Track() {
+function TrackInner() {
   const { token } = useParams();
   const navigate = useNavigate();
 
@@ -185,8 +186,8 @@ export default function Track() {
     fetchPedidoConfigMap()
       .then((c) => {
         if (!alive) return;
-        const phone = String((c as any)?.telefono_tienda ?? (c as any)?.promo_phone ?? '').trim();
-        const wa = String((c as any)?.promo_wa_number ?? (c as any)?.wa_number ?? '').trim();
+        const phone = String((c as any)?.store_phone ?? (c as any)?.pedido_contact_phone ?? (c as any)?.pedido_phone ?? (c as any)?.telefono_tienda ?? (c as any)?.promo_phone ?? '').trim();
+        const wa = String((c as any)?.store_wa ?? (c as any)?.pedido_contact_wa ?? (c as any)?.pedido_wa ?? (c as any)?.promo_wa_number ?? (c as any)?.wa_number ?? '').trim();
         setStorePhone(phone);
         setStoreWa(wa || STORE_WA_NUMBER);
       })
@@ -212,7 +213,7 @@ export default function Track() {
   const [order, setOrder] = useState<any>(null);
 
   const effective = (token || '').trim();
-  const numericId = useMemo(() => fromTrackCode(effective), [effective]);
+  const numericId = useMemo(() => { try { return fromTrackCode(effective); } catch { return null; } }, [effective]);
 
   const showToastSafe = (msg: string, tone: 'info' | 'warn' | 'ok' | 'danger' = 'info') => {
   setToastMsg(msg);
@@ -438,6 +439,7 @@ useEffect(() => {
   const trackCode = stableId !== null ? toTrackCode(stableId) : '';
 
   const status = order?.status || request?.status || '';
+const dataSafe: any = (order ?? request);
   const serviceType = order?.service_type || request?.service_type || '';
 
   // Meta dinámica para "Listo": aclara que salió del horno y qué sigue
@@ -596,7 +598,14 @@ return (
 
               <div className="mt-3">
                 <div className="font-black text-lg whitespace-normal break-words max-w-full leading-snug">{meta.title}</div>
-                <div className="text-sm text-white/80 mt-1">{meta.desc}</div>
+                <div className="text-sm text-white/80 mt-1">{meta.desc}
+{String(dataSafe?.status || '').toLowerCase() === 'rechazado' && dataSafe?.reject_reason?.trim() && (
+  <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+    <div className="font-semibold">Motivo del rechazo</div>
+    <div className="mt-1 whitespace-pre-wrap break-words">{dataSafe?.reject_reason}</div>
+  </div>
+)}
+</div>
               {norm === 'pendiente' && (
   <div className="mt-3 border rounded-xl p-3 bg-yellow-500/10 border-yellow-500/30 text-yellow-200 text-sm">
     <b>Pendiente de confirmación:</b> Estamos validando tu pedido. En breve lo confirmaremos o te contactaremos si falta algún dato.
@@ -673,5 +682,64 @@ return (
         )}
       </div>
     </div>
+  );
+}
+
+class TrackErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any) {
+    // Log para diagnóstico sin romper UX
+    console.error('[TrackErrorBoundary]', error);
+  }
+  render() {
+    if (this.state.hasError) {
+      const msg = String((this.state.error && (this.state.error.message || this.state.error.toString())) || 'Error desconocido');
+      const stack = String((this.state.error && (this.state.error.stack || '')) || '');
+      const full = stack ? (msg + "\n\n" + stack) : msg;
+      const copyErr = async () => {
+        try { await navigator.clipboard.writeText(full); } catch {}
+      };
+      return (
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-4 text-white">
+            <div className="text-lg font-semibold">Ocurrió un error</div>
+            <div className="mt-1 text-sm text-white/70">Este error viene de la pantalla Track. Copia el detalle y envíamelo para corregirlo sin romper nada.</div>
+
+            <div className="mt-3 rounded-lg bg-black/30 p-3 text-xs text-white/80">
+              <div className="font-semibold text-white">Detalle:</div>
+              <div className="mt-1 whitespace-pre-wrap break-words">{msg}</div>
+            </div>
+
+            {stack && (
+              <details className="mt-3 rounded-lg bg-black/20 p-3 text-xs text-white/75">
+                <summary className="cursor-pointer font-medium text-white/90">Ver stack</summary>
+                <pre className="mt-2 whitespace-pre-wrap break-words">{stack}</pre>
+              </details>
+            )}
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-medium text-white" onClick={() => location.reload()}>Refrescar</button>
+              <a className="rounded-lg bg-white/10 px-3 py-2 text-sm text-center" href="/promo">Ir a /promo</a>
+              <button className="col-span-2 rounded-lg bg-emerald-600/90 px-3 py-2 text-sm font-medium text-white" onClick={() => { void copyErr(); }}>Copiar error</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children as any;
+  }
+}
+
+export default function Track() {
+  return (
+    <TrackErrorBoundary>
+      <TrackInner />
+    </TrackErrorBoundary>
   );
 }

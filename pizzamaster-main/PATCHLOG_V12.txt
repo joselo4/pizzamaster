@@ -1,0 +1,2 @@
+AdminPedidoSettings: removed escaped quotes in JSX
+Global TSX cleanup

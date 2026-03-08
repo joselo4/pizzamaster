@@ -1,0 +1,25 @@
+App.tsx: added /pedidos alias
+pedidoConfig.ts: added pedido_enabled/message + contact keys
+AdminPedidoSettings.tsx: added constants pedido_enabled/message
+AdminPedidoSettings.tsx: added state pedidoEnabled/message
+AdminPedidoSettings.tsx: save includes enabled/message (text_value)
+AdminPedidoSettings.tsx: inserted Atención/Pedidos UI + save button
+CustomerOrder.tsx: added refs
+CustomerOrder.tsx: mark promo param ref
+CustomerOrder.tsx: added pedidoEnabled/message/contact states
+CustomerOrder.tsx: applyConfig reads pedido_enabled/message + applies default category
+CustomerOrder.tsx: category clicks mark user chosen
+CustomerOrder.tsx: full-screen close screen
+CustomerOrder.tsx: submit blocked when disabled
+Added AdminPromoToday.tsx: select promo + image url
+admin.tsx: imported AdminPromoToday
+admin.tsx: added promo-hoy tab
+admin.tsx: labeled promo-hoy
+admin.tsx: renders AdminPromoToday
+admin.tsx: added access_validation permission
+Promo.tsx: imported listActivePromotions
+Promo.tsx: added dbPromos state
+Promo.tsx: added todayTitle/imageOverride/featuredSlug
+Promo.tsx: added featuredPromo
+Promo.tsx: added heroImgUnified
+Promo.tsx: promo card shows image from admin or promo

@@ -1,0 +1,13 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1400' height='900' viewBox='0 0 1400 900'>
+<defs>
+  <linearGradient id='g2' x1='0' y1='0' x2='1' y2='1'>
+    <stop offset='0' stop-color='#000' stop-opacity='1'/>
+    <stop offset='1' stop-color='#F97316' stop-opacity='0.35'/>
+  </linearGradient>
+</defs>
+<rect width='1400' height='900' fill='url(#g2)'/>
+<text x='80' y='170' fill='#fff' font-family='Arial, Helvetica, sans-serif' font-size='68' font-weight='900'>FOTO HERO</text>
+<text x='80' y='245' fill='#fff' font-family='Arial, Helvetica, sans-serif' font-size='28' opacity='0.8'>Reemplaza por una foto apetitosa en vertical/hero</text>
+<rect x='80' y='300' width='640' height='460' rx='40' fill='#fff' opacity='0.06' stroke='#fff' stroke-opacity='0.15'/>
+<text x='110' y='390' fill='#fff' font-family='Arial, Helvetica, sans-serif' font-size='26' opacity='0.85'>Tip: 1200×1600 (≤400KB)</text>
+</svg>

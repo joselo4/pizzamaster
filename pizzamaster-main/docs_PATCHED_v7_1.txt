@@ -1,0 +1,4 @@
+PATCHED_v7.1
+- Se agregó 20260128_all_in_one.sql (all-in-one seguro).
+- Inyección de PatientExtraFields en pantalla(s) de Nuevo Paciente si se detectaron patrones.
+- Archivos parcheados: ninguno (se entregó PatientsNew.PATCHED_EXAMPLE.tsx)

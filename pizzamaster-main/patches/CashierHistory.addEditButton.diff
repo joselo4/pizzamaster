@@ -1,0 +1,32 @@
+
+*** a/src/pages/CashierHistory.tsx	2026-03-04
+--- b/src/pages/CashierHistory.tsx	2026-03-04
+***************
+*** 120,140 ****
+            <div className="flex items-center gap-2">
+              <button
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200"
+                onClick={() => reprint(o)}
+              >
+                Reimprimir
+              </button>
+            </div>
+          </div>
+        ))}
+--- 120,148 ----
+            <div className="flex items-center gap-2">
+              <button
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200"
+                onClick={() => reprint(o)}
+              >
+                Reimprimir
+              </button>
++             <button
++               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
++               onClick={() => navigate(`/cashier/history/edit/${o.id}`)}
++             >
++               Editar
++             </button>
+            </div>
+          </div>
+        ))}

@@ -1,0 +1,3 @@
+AdminPedidoSettings.tsx: dedupe updates before upsert
+AdminPedidoSettings.tsx: added Guardar Atención/Pedidos button
+AdminPedidoSettings.tsx: added Guardar categoría inicial button

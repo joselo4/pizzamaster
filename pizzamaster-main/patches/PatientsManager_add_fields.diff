@@ -1,0 +1,56 @@
+
+*** SUGERENCIA DE PARCHE (aplicar manualmente con tu editor) ***
+Archivo: src/modules/pantbc/components/PatientsManager.tsx
+
+1) Estado del formulario (buscar el useState del form y añadir campos):
+
+  const [form, setForm] = useState<any>({
+    // ...campos existentes...
+    department: '',
+    province: '',
+    district: '',
+    address: '',
+    health_center_id: null,
+  });
+
+2) Guardado (insert/update): incluir los campos nuevos en el payload
+
+  const payload = {
+    // ...campos existentes...
+    department: form.department?.toUpperCase() || null,
+    province:   form.province?.toUpperCase()   || null,
+    district:   form.district?.toUpperCase()   || null,
+    address:    form.address || null,
+    health_center_id: form.health_center_id ? Number(form.health_center_id) : null,
+  };
+
+  if (isEdit) await supabase.from('patients').update(payload).eq('id', currentId);
+  else        await supabase.from('patients').insert(payload);
+
+3) Inputs (añadir controles en el JSX donde corresponda):
+
+  <label className="text-[10px] font-bold text-gray-500">DEPARTAMENTO</label>
+  <input className="w-full border p-2 rounded uppercase"
+         value={form.department} onChange={e => setForm(f=>({...f, department:e.target.value}))} />
+
+  <label className="text-[10px] font-bold text-gray-500">PROVINCIA</label>
+  <input className="w-full border p-2 rounded uppercase"
+         value={form.province} onChange={e => setForm(f=>({...f, province:e.target.value}))} />
+
+  <label className="text-[10px] font-bold text-gray-500">DISTRITO</label>
+  <input className="w-full border p-2 rounded uppercase"
+         value={form.district} onChange={e => setForm(f=>({...f, district:e.target.value}))} />
+
+  <label className="text-[10px] font-bold text-gray-500">DIRECCIÓN</label>
+  <input className="w-full border p-2 rounded"
+         value={form.address} onChange={e => setForm(f=>({...f, address:e.target.value}))} />
+
+  <label className="text-[10px] font-bold text-gray-500">CENTRO DE SALUD</label>
+  <select className="w-full border p-2 rounded"
+          value={form.health_center_id ?? ''}
+          onChange={e => setForm(f=>({...f, health_center_id: e.target.value || null}))}>
+    <option value="">— Seleccione —</option>
+    {centers?.map((c:any)=> <option key={c.id} value={c.id}>{c.name}</option>)}
+  </select>
+
+NOTA: usa los hooks/queries de centers que ya empleas en otros módulos para poblar el combo.

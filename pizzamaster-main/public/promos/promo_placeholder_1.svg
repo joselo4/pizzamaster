@@ -1,0 +1,15 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='900' viewBox='0 0 1200 900'>
+<defs>
+  <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+    <stop offset='0' stop-color='#F97316' stop-opacity='0.35'/>
+    <stop offset='1' stop-color='#000' stop-opacity='1'/>
+  </linearGradient>
+</defs>
+<rect width='1200' height='900' fill='url(#g)'/>
+<circle cx='860' cy='430' r='260' fill='#111' stroke='#f8fafc' stroke-opacity='0.15' stroke-width='6'/>
+<circle cx='860' cy='430' r='210' fill='#F59E0B' opacity='0.25'/>
+<circle cx='860' cy='430' r='175' fill='#fff' opacity='0.10'/>
+<text x='70' y='160' fill='#fff' font-family='Arial, Helvetica, sans-serif' font-size='64' font-weight='900'>PROMO</text>
+<text x='70' y='235' fill='#fff' font-family='Arial, Helvetica, sans-serif' font-size='36' font-weight='700' opacity='0.9'>Sabor que no perdona</text>
+<text x='70' y='305' fill='#fff' font-family='Arial, Helvetica, sans-serif' font-size='22' opacity='0.75'>Imagen placeholder. Reemplaza por foto real de tu pizza.</text>
+</svg>

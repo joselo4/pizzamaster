@@ -1,0 +1,44 @@
+// === PATCH quirúrgico para src/pages/Promo.tsx ===
+// Objetivo: alinear copy y estructura a la campaña "CARLOS TE ENGAÑA".
+//
+// 1) Reemplaza los defaults (fallbacks) de estos campos:
+//
+// const badge = cfg?.promo_badge || '...';
+// const titleA = cfg?.promo_headline || '...';
+// const titleB = cfg?.promo_subheadline || '...';
+// const body = cfg?.promo_body || '...';
+// const ctaLabel = cfg?.promo_cta_label || '...';
+//
+// Por estos valores (mantén cfg?.... || para que Admin pueda editar):
+//
+// badge:
+//   'CHISME REAL. PROMO REAL.'
+// titleA:
+//   '¡CARLOS TE ENGAÑA! 💔'
+// titleB:
+//   '...Dijo que él invitaba la cena hoy y se hizo humo.'
+// body:
+//   'No dejes que te rompan el corazón (ni el estómago). Consuélate con nuestra masa fina y crujiente de 16 cm.'
+// ctaLabel:
+//   'PEDIR MI PIZZA AHORA'
+//
+// 2) En la sección de beneficios (donde ya usas íconos), cambia el texto a:
+//
+// Ícono cronómetro:
+//   '¡Lista en 8 minutos!'
+//   '(Más rápido que las excusas de Carlos).'
+// Ícono pizza:
+//   'La personal perfecta (16cm).'
+//   'Ni muy grande, ni muy chica. Tuya.'
+// Ícono masa/crunch:
+//   'Masa extra fina y crujiente.'
+//   'El verdadero "crunch".'
+//
+// 3) Agrega al final de esa sección un link:
+//   <Link to="/pedido" className="underline text-white/80">¿No quieres pepperoni? Mira todo el menú.</Link>
+//
+// 4) (Opcional) Hero de imagen:
+// Si ya tienes imagen en la landing, perfecto.
+// Si no, agrega un <img> arriba del CTA apuntando a una URL configurable (p.e. cfg.promo_hero_url).
+//
+// === FIN PATCH ===

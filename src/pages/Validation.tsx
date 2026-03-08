@@ -194,7 +194,19 @@ export default function Validation() {
             <Search size={16} className="text-white/50" />
             <input className="w-full bg-transparent outline-none text-sm placeholder:text-white/40" placeholder="Buscar (opcional)" />
           </div>
-          <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white shadow-sm hover:bg-white/15" onClick={load}>
+          
+<div className="mt-3">
+  <label className="block text-sm font-medium text-gray-700">Motivo del rechazo</label>
+  <textarea
+    className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-900 shadow-sm focus:border-rose-500 focus:ring-rose-500"
+    rows={3}
+    value={rejectReason}
+    onChange={(e) => setRejectReason(e.target.value)}
+    placeholder="Indica un motivo de rechazo (obligatorio)"
+  />
+  <div className="mt-1 text-xs text-gray-500">Este motivo se mostrará al cliente en /track cuando el pedido sea Rechazado.</div>
+</div>
+<button type="button" className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white shadow-sm hover:bg-white/15" onClick={load}>
             <RefreshCw size={16} /> Actualizar
           </button>
         </div>

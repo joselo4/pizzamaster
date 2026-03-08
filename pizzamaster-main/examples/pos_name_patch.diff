@@ -1,0 +1,6 @@
+
+--- a/src/pages/POS.tsx
++++ b/src/pages/POS.tsx
+@@
+-  <h3 className="text-sm font-medium truncate">{item.name}</h3>
++  <h3 className="text-sm font-medium whitespace-normal break-words max-w-full leading-snug">{item.name}</h3>

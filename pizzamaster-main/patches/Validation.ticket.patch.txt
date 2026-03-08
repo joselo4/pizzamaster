@@ -1,0 +1,34 @@
+
+// === PATCH for src/pages/Validation.tsx ===
+// 1) Add imports:
+// import { useState } from 'react';
+// import { supabase } from '../lib/supabase';
+// import { refreshConfigCache } from '../lib/configCache';
+// import { generateTicketPDF } from '../lib/ticket'; // adjust if your export name differs
+// import type { Order } from '../types';
+
+// 2) Inside component:
+const [printingId, setPrintingId] = useState<number | null>(null);
+
+const handlePrint = async (orderId: number) => {
+  try {
+    setPrintingId(orderId);
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*') // adjust to your view if needed
+      .eq('id', orderId)
+      .single();
+    if (error || !order) return;
+
+    const cfg = await refreshConfigCache();
+    const blob = await generateTicketPDF(order as Order, { config: cfg, show_client: true }, '--- Ticket ---');
+
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } finally {
+    setPrintingId(null);
+  }
+};
+
+// 3) In your row render, add a button:
+// <button disabled={printingId===o.id} onClick={() => handlePrint(o.id)}>Ticket</button>

@@ -120,10 +120,12 @@ export default function CashierOrderEditor() {
           <textarea value={row.notes || ''} onChange={e => setRow(prev => prev ? { ...prev, notes: e.target.value } : prev)} className="w-full min-h-[120px] border rounded px-3 py-2 bg-white text-gray-900" placeholder="Observaciones" />
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <button onClick={save} disabled={!canSave} className={`px-4 py-2 rounded text-white ${saving ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+      <div className="sticky bottom-0 left-0 right-0 z-30 -mx-4 mt-6 border-t border-black/10 bg-white/95 px-4 py-3 backdrop-blur">
+  <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+    <button onClick={save} disabled={!canSave} className={`px-4 py-2 rounded text-white ${saving ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
         <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300" onClick={() => navigate(-1)}>Cancelar</button>
-      </div>
+  </div>
+</div>
     </div>
   );
 }

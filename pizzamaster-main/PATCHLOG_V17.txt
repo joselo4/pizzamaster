@@ -1,0 +1,9 @@
+admin.tsx: clientes map uses idx key (addedIdx=2, keyRepl=1)
+admin.tsx: added htmlFor/id/name to user modal inputs
+admin.tsx: inserted client_phone label
+admin.tsx: client_phone id/name
+admin.tsx: client_name label
+admin.tsx: client_name id/name
+admin.tsx: client_address label
+admin.tsx: client_address id/name
+admin.tsx: permission checkbox id/name (1)
