@@ -1,6 +1,9 @@
 import jsPDF from 'jspdf';
 import type { Order, TicketSettings } from '../types';
 
+
+const nonEmpty = (v: any) => v != null && String(v).trim().length > 0;
+
 export const generateTicketPDF = async (order: Order, settings: TicketSettings, title: string = '--- Ticket ---'): Promise<Blob> => {
   const width = settings.paper_width === '80' ? 80 : 58;
   const margin = 2; 
@@ -12,7 +15,7 @@ export const generateTicketPDF = async (order: Order, settings: TicketSettings, 
   // Contar líneas extra
   let extraSocialsList: { platform: string, handle: string }[] = [];
   try {
-      if (settings.extra_socials) {
+      if (nonEmpty(settings.extra_socials)) {
           extraSocialsList = JSON.parse(settings.extra_socials);
           socialLines += extraSocialsList.length;
       }
@@ -168,17 +171,17 @@ export const generateTicketPDF = async (order: Order, settings: TicketSettings, 
       y += 5;
       doc.setFontSize(8);
       
-      if(settings.wifi_pass) {
+      if (nonEmpty(settings.wifi_pass)) {
           doc.setFont('helvetica', 'bold');
           doc.text(`WIFI: ${settings.wifi_pass}`, centerX, y, { align: 'center' });
           doc.setFont('helvetica', 'normal');
           y += 4;
       }
       
-      if(settings.facebook) { doc.text(`FB: ${settings.facebook}`, centerX, y, { align: 'center' }); y += 4; }
-      if(settings.instagram) { doc.text(`IG: ${settings.instagram}`, centerX, y, { align: 'center' }); y += 4; }
-      if(settings.tiktok) { doc.text(`TikTok: ${settings.tiktok}`, centerX, y, { align: 'center' }); y += 4; }
-      if(settings.website) { doc.text(settings.website, centerX, y, { align: 'center' }); y += 4; }
+      if (nonEmpty(settings.facebook)) { doc.text(`FB: ${settings.facebook}`, centerX, y, { align: 'center' }); y += 4; }
+      if (nonEmpty(settings.instagram)) { doc.text(`IG: ${settings.instagram}`, centerX, y, { align: 'center' }); y += 4; }
+      if (nonEmpty(settings.tiktok)) { doc.text(`TikTok: ${settings.tiktok}`, centerX, y, { align: 'center' }); y += 4; }
+      if (nonEmpty(settings.website)) { doc.text(settings.website, centerX, y, { align: 'center' }); y += 4; }
       
       // Redes Extra
       extraSocialsList.forEach(social => {
@@ -188,7 +191,7 @@ export const generateTicketPDF = async (order: Order, settings: TicketSettings, 
   }
 
   // 8. PIE DE PÁGINA (Footer)
-  if (settings.footer_text) {
+  if (nonEmpty(settings.footer_text)) {
     y += 4;
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
@@ -197,7 +200,7 @@ export const generateTicketPDF = async (order: Order, settings: TicketSettings, 
     y += (splitFooter.length * 4);
   }
   
-  y += 5;
+  y += 2;
   doc.setFontSize(7);
   doc.text('.', centerX, y, { align: 'center' }); 
 

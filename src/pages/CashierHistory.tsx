@@ -37,6 +37,13 @@ export default function CashierHistory() {
     show_notes: String(ticketConfig.show_notes) !== 'false',
     show_client: String(ticketConfig.show_client) !== 'false',
     logo_url: ticketConfig.logo_url,
+    // Redes sociales + WiFi (para reimpresión en Historial)
+    facebook: ticketConfig.facebook,
+    instagram: ticketConfig.instagram,
+    tiktok: ticketConfig.tiktok,
+    website: ticketConfig.website,
+    wifi_pass: ticketConfig.wifi_pass,
+    extra_socials: ticketConfig.extra_socials,
   }), [ticketConfig]);
 
   const fetchHistory = async () => {

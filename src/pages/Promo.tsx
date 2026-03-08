@@ -6,6 +6,7 @@ import { getConfigCache, refreshConfigCache } from '../lib/configCache';
 import { setSEO } from '../lib/seo';
 import { slugify } from '../lib/promoCampaigns';
 import { listActivePromotions, type Promotion } from '../lib/promos';
+import { logPromoEvent } from '../lib/promoEvents';
 
 const DEFAULT_PHONE = '+51989466466';
 const DEFAULT_WA = '51989466466';

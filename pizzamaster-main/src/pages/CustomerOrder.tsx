@@ -8,6 +8,7 @@ import { fetchPedidoConfigMap } from '../lib/pedidoConfig';
 import { ShoppingCart, UserCog, MapPin, Phone, Clock, Plus, Minus, Trash2, Pizza } from 'lucide-react';
 import { logPedidoVisit } from '../lib/promoCampaigns';
 import { toTrackCode } from '../lib/trackingCode';
+import { logPromoEvent } from '../lib/promoEvents';
 
 function money(n: number) {
   return `S/ ${Number(n || 0).toFixed(2)}`;
@@ -20,6 +21,14 @@ function onlyDigits9(v: string) {
 export default function CustomerOrder() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const refParam = useMemo(() => new URLSearchParams(location.search).get('ref'), [location.search]);
+
+  useEffect(() => {
+    if (refParam) {
+      void logPromoEvent('pedido_visit', { ref: refParam, path: location.pathname + location.search });
+    }
+  }, [refParam, location.pathname, location.search]);
 
   useEffect(() => {
     let onFocus: any;

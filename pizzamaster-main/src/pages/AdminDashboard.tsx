@@ -14,11 +14,33 @@ function Card({ title, value, hint }: { title: string; value: string | number; h
 }
 
 export default function AdminDashboard() {
+  const loadFunnel = async (days: number) => {
+    try {
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+      const [{ count: views }, { count: pedido }, { count: requests }, { count: orders }] = await Promise.all([
+        supabase.from('promo_events').select('*', { count: 'exact', head: true }).eq('event', 'view').gte('created_at', since),
+        supabase.from('promo_events').select('*', { count: 'exact', head: true }).eq('event', 'pedido_visit').gte('created_at', since),
+        supabase.from('order_requests').select('*', { count: 'exact', head: true }).gte('created_at', since),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', since),
+      ] as any);
+      const v = Number(views || 0);
+      const p = Number(pedido || 0);
+      const r = Number(requests || 0);
+      const o = Number(orders || 0);
+      const convView = v > 0 ? (r / v) * 100 : 0;
+      const convPedido = p > 0 ? (r / p) * 100 : 0;
+      setFunnel({ views: v, pedido: p, requests: r, orders: o, convView, convPedido });
+    } catch {
+      // No romper si falta tabla/policy
+    }
+  };
+
   const [orders, setOrders] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    void loadFunnel(7);
     (async () => {
       setLoading(true);
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
