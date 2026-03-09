@@ -102,22 +102,22 @@ export default function CashierOrderEditor() {
       <div className="space-y-4 bg-white rounded-md border p-4">
         <div>
           <label className="block text-sm font-medium mb-1">Nombre del cliente</label>
-          <input value={row.customer_name || ''} onChange={e => setRow(prev => prev ? { ...prev, customer_name: e.target.value } : prev)} className="w-full border rounded px-3 py-2 bg-white text-gray-900" placeholder="Nombre" />
+          <input id="customer_name" name="customer_name" value={row.customer_name || ''} onChange={e => setRow(prev => prev ? { ...prev, customer_name: e.target.value } : prev)} className="w-full border rounded px-3 py-2 bg-white text-gray-900" placeholder="Nombre" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Teléfono</label>
-          <input value={row.phone || ''} onChange={e => setRow(prev => prev ? { ...prev, phone: e.target.value } : prev)} className="w-full border rounded px-3 py-2 bg-white text-gray-900" placeholder="Teléfono" />
+          <label htmlFor="customer_phone"</label>
+          <input id="customer_name" name="customer_name" value={row.phone || ''} onChange={e => setRow(prev => prev ? { ...prev, phone: e.target.value } : prev)} className="w-full border rounded px-3 py-2 bg-white text-gray-900" placeholder="Teléfono" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Estado</label>
-          <select value={row.status || ''} onChange={e => setRow(prev => prev ? { ...prev, status: e.target.value } : prev)} className="w-full border rounded px-3 py-2 bg-white text-gray-900">
+          <label htmlFor="status"</label>
+          <select id="status" name="status" value={row.status || ''} onChange={e => setRow(prev => prev ? { ...prev, status: e.target.value } : prev)} className="w-full border rounded px-3 py-2 bg-white text-gray-900">
             <option value="">(sin cambio)</option>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Notas</label>
-          <textarea value={row.notes || ''} onChange={e => setRow(prev => prev ? { ...prev, notes: e.target.value } : prev)} className="w-full min-h-[120px] border rounded px-3 py-2 bg-white text-gray-900" placeholder="Observaciones" />
+          <label htmlFor="notes"</label>
+          <textarea id="notes" name="notes" value={row.notes || ''} onChange={e => setRow(prev => prev ? { ...prev, notes: e.target.value } : prev)} className="w-full min-h-[120px] border rounded px-3 py-2 bg-white text-gray-900" placeholder="Observaciones" />
         </div>
       </div>
       <div className="flex items-center gap-3">

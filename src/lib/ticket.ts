@@ -203,6 +203,5 @@ export const generateTicketPDF = async (order: Order, settings: TicketSettings, 
   y += 2;
   doc.setFontSize(7);
   doc.text('.', centerX, y, { align: 'center' }); 
-
   return doc.output('blob');
 };
