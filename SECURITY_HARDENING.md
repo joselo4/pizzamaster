@@ -1,10 +1,13 @@
-# SECURITY_HARDENING_V2
+# SECURITY_HARDENING_V3
 
-## Qué corrige esta versión
-- **Dev CSP compatible con Vite/React**: permite el preámbulo inline de `@vitejs/plugin-react` y conexiones `ws://localhost:*` solo en `vite dev`.
-- **Prod/preview CSP estricta**: usa `script-src 'self'` y `connect-src` corregido con `https://*.ingest.sentry.io`.
-- **Sin `frame-ancestors` en meta**: esta directiva se deja únicamente por header, porque el navegador la ignora dentro de `<meta http-equiv="Content-Security-Policy">`.
-- Se mantiene `public/_headers`, `robots.txt`, `_redirects` y `404.html` para endurecimiento en hosting estático.
+## Implementado en este ZIP
+- Headers reales para producción/hosting estático: `Content-Security-Policy`, `X-Frame-Options`, `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy`, `X-Content-Type-Options`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`.
+- Compatibilidad de desarrollo con Vite/React (`vite dev`) sin romper Fast Refresh.
+- Reglas para bloquear públicamente `/administrator/*` y `/user/login` devolviendo `404.html`.
+- `robots.txt` neutral: ya no menciona rutas sensibles como `admin`.
+- `.env` saneado y `.gitignore` reforzado.
 
-## Nota importante
-En desarrollo (`npm run dev`) verás una CSP más permisiva por necesidad técnica de Vite. En producción/preview se aplica la política estricta. No reutilices la CSP de desarrollo en producción.
+## Lo que NO puede resolver un ZIP por sí solo
+- Puerto 8080 abierto: se cierra en infraestructura (firewall, contenedor, reverse proxy o panel del hosting).
+- Header `Server: cloudflare`: depende del proveedor/CDN.
+- HSTS solo surte efecto si el sitio final se sirve por HTTPS real.

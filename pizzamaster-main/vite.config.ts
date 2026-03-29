@@ -22,20 +22,10 @@ const previewHeaders = {
   'Cross-Origin-Resource-Policy': 'same-origin',
 }
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(() => ({
   base: '/',
   plugins: [react()],
   optimizeDeps: { entries: ['index.html'] },
-  server: {
-    host: '127.0.0.1',
-    port: 5173,
-    strictPort: true,
-    headers: devHeaders,
-  },
-  preview: {
-    host: '127.0.0.1',
-    port: 4173,
-    strictPort: true,
-    headers: previewHeaders,
-  },
+  server: { host: '127.0.0.1', port: 5173, strictPort: true, headers: devHeaders },
+  preview: { host: '127.0.0.1', port: 4173, strictPort: true, headers: previewHeaders },
 }))
