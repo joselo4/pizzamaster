@@ -7,6 +7,7 @@ import { setSEO } from '../lib/seo';
 import { slugify } from '../lib/promoCampaigns';
 import { listActivePromotions, type Promotion } from '../lib/promos';
 import { logPromoEvent } from '../lib/promoEvents';
+// PROMO_IMAGE_RATIO_FIX_3_4
 
 const DEFAULT_PHONE = '+51989466466';
 const DEFAULT_WA = '51989466466';
@@ -243,7 +244,11 @@ const promos = useMemo(() => {
 
             <div className="rounded-3xl border border-white/10 bg-card p-5">
               <div className="mb-4 overflow-hidden rounded-2xl border border-white/10">
-                <img src={heroImgUnified} alt="Promo" className="h-48 w-full object-cover" loading="lazy" />
+                <div className="mt-4">
+                    <div className="mx-auto w-full max-w-[480px] aspect-[3/4] overflow-hidden rounded-2xl bg-neutral-900 shadow-lg ring-1 ring-white/10">
+                      <img src={heroImgUnified} alt="Promo" className="h-full w-full object-cover object-center" loading="lazy" />
+                    </div>
+                  </div>
               </div>
               <div className="text-xl font-black">{todayTitle}</div>
               <div className="mt-2 text-slate-300">{detailTextToday}</div>

@@ -125,6 +125,7 @@ export default function AdminPromoToday() {
               <div>
                 <label htmlFor="promo_today_image_url" className="text-sm font-bold">Imagen (URL)</label>
                 <input id="promo_today_image_url" name="promo_today_image_url" value={todayImageUrl} onChange={(e) => setTodayImageUrl(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm" placeholder="https://..." />
+                <div className="mt-2 text-[11px] leading-relaxed text-white/60">Formato ideal: <span className="font-semibold text-white/80">1200×1600 px</span> (proporción 3:4). Se mostrará mejor en la vista móvil y evitará franjas negras o escalado extraño.</div>
                 <div className="mt-2">
                   <button type="button" onClick={usePromoImage} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-bold hover:bg-white/15">Usar imagen de la promo</button>
                 </div>
@@ -154,8 +155,11 @@ export default function AdminPromoToday() {
 
             <div className="text-sm font-bold">Vista previa</div>
             <div className="mt-3 grid md:grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/10 overflow-hidden">
-                <img src={previewImg || '/promos/promo_placeholder_1.svg'} alt="preview" className="h-48 w-full object-cover" />
+              <div className="rounded-2xl border border-white/10 p-3 bg-black/10">
+                <div className="mx-auto w-full max-w-[480px] aspect-[3/4] overflow-hidden rounded-2xl bg-neutral-900 ring-1 ring-white/10">
+                  <img src={previewImg || '/promos/promo_placeholder_1.svg'} alt="preview" className="h-full w-full object-cover object-center" />
+                </div>
+                <div className="mt-2 text-[11px] leading-relaxed text-white/55">Vista previa estandarizada en 3:4 para que coincida con la promo móvil real.</div>
               </div>
               <div>
                 <div className="text-lg font-black">{todayTitle}</div>
