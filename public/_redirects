@@ -1,0 +1,16 @@
+# Bloqueo de rutas sensibles comunes (no afecta /admin real de la app)
+/.env            /404.html  404
+/.env*           /404.html  404
+/.git            /404.html  404
+/.git/*          /404.html  404
+/wp-admin        /404.html  404
+/wp-admin/*      /404.html  404
+/phpmyadmin      /404.html  404
+/phpmyadmin/*    /404.html  404
+/adminer         /404.html  404
+/adminer*        /404.html  404
+/database.sql    /404.html  404
+/backup.zip      /404.html  404
+
+# Fallback SPA para React/Vite
+/*               /index.html 200

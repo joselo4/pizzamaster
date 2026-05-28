@@ -1,0 +1,12 @@
+Cambios del parche:
+1) /pedido y /pedidos ahora leen pedido_categories desde src/lib/pedidoConfig.ts.
+2) La lista de tabs respeta exactamente el orden guardado en Admin > Productos y no vuelve a ordenar con categorías de productos.
+3) El cache de configuración en /pedido baja a 5 segundos y el botón Refrescar limpia cache.
+4) CSP actualizada para permitir Cloudflare Insights: static.cloudflareinsights.com e inline script inyectado por Cloudflare.
+5) Se mantiene el bloqueo de login máximo 5 intentos con SQL 33_login_exponential_lock.sql.
+
+Después de desplegar:
+- Ejecutar npm install && npm run build.
+- Subir el build.
+- En Cloudflare, purgar cache.
+- Si usas Supabase existente, ejecutar supabase_sql/33_login_exponential_lock.sql.

@@ -1,0 +1,54 @@
+
+// === PATCH for src/pages/Track.tsx ===
+// 1) Add at top-level imports:
+// import { useState, useCallback } from 'react';
+// import { supabase } from '../lib/supabase';
+// import { Phone, MapPin, StickyNote } from 'lucide-react';
+
+// 2) Inside component:
+const showClientData = false; // public view → hide PII
+
+const [id, setId] = useState('');
+const [code, setCode] = useState('');
+const [loading, setLoading] = useState(false);
+const [order, setOrder] = useState<any>(null);
+const [error, setError] = useState<string | null>(null);
+
+const fetchTrack = useCallback(async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const { data, error } = await supabase.rpc('rpc_track_order', {
+      p_id: id ? Number(id) : null,
+      p_code: code || null,
+    });
+    if (error) throw error;
+    setOrder(data?.[0] ?? null);
+    if (!data?.[0]) setError('No se encontró pedido con esos datos.');
+  } catch (e: any) {
+    setError(e.message ?? 'Error al consultar tracking');
+  } finally {
+    setLoading(false);
+  }
+}, [id, code]);
+
+const handleRefresh = () => fetchTrack();
+
+// 3) Replace the client PII render block with:
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-white/80">
+  <div><span className="text-white/60">Cliente:</span> {showClientData ? (clientName ?? '—') : '—'}</div>
+  <div className="flex items-center gap-2"><Phone size={16}/><span className="text-white/60">Tel:</span> {showClientData ? (phone ?? '—') : '—'}</div>
+  <div><span className="text-white/60">Tipo:</span> {serviceType ?? '—'}</div>
+  {showClientData && isDelivery && (
+    <div className="sm:col-span-2 flex items-start gap-2"><MapPin size={16} className="mt-0.5"/><span><span className="text-white/60">Dirección:</span> {address ?? '—'}</span></div>
+  )}
+  {showClientData && notes && (
+    <div className="sm:col-span-2 flex items-start gap-2"><StickyNote size={16} className="mt-0.5"/><span><span className="text-white/60">Notas:</span> {notes}</span></div>
+  )}
+</div>
+
+// 4) Add buttons in the form/actions area:
+<button onClick={fetchTrack} disabled={loading}>Buscar</button>
+<button onClick={handleRefresh} disabled={loading || (!id && !code)}>
+  {loading ? 'Actualizando...' : 'Actualizar'}
+</button>

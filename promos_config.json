@@ -1,0 +1,70 @@
+{
+  "brand": {
+    "store_name": "PizzaMaster",
+    "primary": "#EF4444",
+    "secondary": "#111827",
+    "accent": "#F59E0B",
+    "whatsapp": "+51XXXXXXXXX",
+    "cta_label": "Pedir por WhatsApp",
+    "cta_url": "https://wa.me/51XXXXXXXXX?text=Hola%20quiero%20la%20promo",
+    "legal": "Válido hoy. 2x1 aplica a pizzas del mismo tamaño. Sujeto a stock."
+  },
+  "promos": [
+    {
+      "slug": "2x1-hawaiana",
+      "name": "2x1 Hawaiana",
+      "badge": "2x1",
+      "headline": "Paga 1 y llévate 2",
+      "subheadline": "Hawaiana (jamón + piña)",
+      "price_text": "S/ 39.90",
+      "detail_text": "2 pizzas medianas Hawaiana",
+      "sort_index": 10,
+      "image": {
+        "banner": "/promos/2x1_hawaiana_banner.svg",
+        "thumb": "/promos/2x1_hawaiana_square.svg"
+      }
+    },
+    {
+      "slug": "2x1-pepperoni",
+      "name": "2x1 Pepperoni",
+      "badge": "2x1",
+      "headline": "Paga 1 y llévate 2",
+      "subheadline": "Pepperoni (full queso)",
+      "price_text": "S/ 39.90",
+      "detail_text": "2 pizzas medianas Pepperoni",
+      "sort_index": 11,
+      "image": {
+        "banner": "/promos/2x1_pepperoni_banner.svg",
+        "thumb": "/promos/2x1_pepperoni_square.svg"
+      }
+    },
+    {
+      "slug": "2x1-americana",
+      "name": "2x1 Americana",
+      "badge": "2x1",
+      "headline": "Paga 1 y llévate 2",
+      "subheadline": "Americana (jamón + queso)",
+      "price_text": "S/ 39.90",
+      "detail_text": "2 pizzas medianas Americana",
+      "sort_index": 12,
+      "image": {
+        "banner": "/promos/2x1_americana_banner.svg",
+        "thumb": "/promos/2x1_americana_square.svg"
+      }
+    },
+    {
+      "slug": "combo-familiar",
+      "name": "Combo Familiar",
+      "badge": "TOP VENTA",
+      "headline": "2 medianas + 1.5L",
+      "subheadline": "Ideal para 4 personas",
+      "price_text": "S/ 39.90",
+      "detail_text": "2 pizzas medianas + bebida",
+      "sort_index": 2,
+      "image": {
+        "banner": "/promos/combo_familiar_landscape.svg",
+        "thumb": "/promos/combo_familiar_square.svg"
+      }
+    }
+  ]
+}

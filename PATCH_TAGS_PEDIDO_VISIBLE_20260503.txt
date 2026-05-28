@@ -1,0 +1,8 @@
+Corrección incluida:
+- /pedido ahora lee pedido_categories y pedido_hidden_categories.
+- Los tags se muestran en el orden definido en Admin > Productos.
+- Si se crea un producto con un tag nuevo, ese tag aparece al final aunque todavía no haya sido añadido manualmente.
+- Si se oculta un tag con X, queda registrado en pedido_hidden_categories para que no reaparezca automáticamente por tener productos.
+- El botón Guardar orden guarda también el orden de tags.
+- CSP permite Cloudflare Insights.
+- Se mantiene bloqueo de login con 5 intentos y SQL 33_login_exponential_lock.sql.

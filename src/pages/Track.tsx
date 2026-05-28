@@ -1,0 +1,833 @@
+import React from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import {
+  Search,
+  ClipboardCopy,
+  ArrowLeft,
+  Package,
+  Bike,
+  CheckCircle2,
+  RefreshCw,
+  PhoneCall,
+  MessageCircle,
+  Sun,
+  Moon,
+} from 'lucide-react';
+import { toTrackCode, fromTrackCode, isUuid, toSolicitudId } from '../lib/trackingCode';
+import { fetchPedidoConfigMap } from '../lib/pedidoConfig';
+import { buildWhatsAppLink, STORE_WA_NUMBER } from '../lib/whatsapp';
+
+const SUPPORT_WHATSAPP = '51989466466';
+const SUPPORT_WHATSAPP_HREF = `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent('Hola, tengo una queja o sugerencia sobre mi pedido.')}`;
+
+function money(n: number) {
+  return `S/ ${Number(n || 0).toFixed(2)}`;
+}
+
+const MAX_TRACK_HOURS = 72;
+
+function onlyDigits(v: any) {
+  return String(v ?? '').replace(/\D/g, '');
+}
+
+function normalizeTel(v: any) {
+  const raw = String(v ?? '').trim();
+  if (!raw) return '';
+  return raw.startsWith('+') ? `+${onlyDigits(raw)}` : onlyDigits(raw);
+}
+
+function isOlderThanHours(createdAt: string | undefined | null, maxHours: number) {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  const age = (Date.now() - t) / (1000 * 60 * 60);
+  return age > maxHours;
+}
+
+type StatusTone = 'info' | 'warn' | 'ok' | 'danger';
+
+type StatusMeta = {
+  title: string;
+  desc: string;
+  tone?: StatusTone;
+};
+
+const STATUS_META: Record<string, StatusMeta> = {
+  // Solicitudes web (order_requests)
+  'nuevo': {
+    title: 'Solicitud recibida',
+    desc: 'Tu pedido fue registrado. En breve lo revisaremos para aprobarlo.',
+    tone: 'info',
+  },
+  'en revisión': {
+    title: 'En revisión',
+    desc: 'Estamos validando tu pedido. Si falta algo, te contactaremos.',
+    tone: 'info',
+  },
+  'aprobado': {
+    title: 'Aprobado',
+    desc: 'Tu pedido fue aprobado y pasó a preparación.',
+    tone: 'ok',
+  },
+  'rechazado': {
+    title: 'Rechazado',
+    desc: 'Tu pedido no pudo ser aprobado. Revisa el motivo y vuelve a intentarlo.',
+    tone: 'danger',
+  },
+
+  // Pedidos internos (orders)
+  'pendiente': {
+  title: 'Pendiente de confirmación',
+  desc: 'Estamos validando tu pedido. En breve lo confirmaremos o nos comunicaremos contigo si falta algún dato.',
+  tone: 'warn',
+ },
+  'horno': {
+    title: 'En horno',
+    desc: 'Tu pedido está en cocina y en proceso de horneado/preparación final.',
+    tone: 'info',
+  },
+  // 'listo' y el tramo final se ajustan dinámicamente según tipo (Delivery/Recojo)
+  'en camino': {
+  title: 'En camino',
+  desc: '¡Vamos en camino! Tu pedido ya salió y va rumbo a ti.',
+  tone: 'info',
+ },
+ 'en transporte': {
+  title: 'En camino',
+  desc: '¡Vamos en camino! Tu pedido ya salió y va rumbo a ti.',
+    tone: 'info',
+  },
+  'entregado': {
+    title: 'Entregado',
+    desc: '¡Gracias! Tu pedido fue entregado.',
+    tone: 'ok',
+  },
+  'recogido': {
+    title: 'Recogido',
+    desc: '¡Gracias! Tu pedido fue recogido.',
+    tone: 'ok',
+  },
+  'cancelado': {
+    title: 'Cancelado',
+    desc: 'Este pedido fue cancelado.',
+    tone: 'danger',
+  },
+};
+
+function toneClasses(tone?: StatusTone) {
+  switch (tone) {
+    case 'ok':
+      return 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-300';
+    case 'danger':
+      return 'bg-rose-50 border-rose-200 text-rose-850 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300';
+    case 'warn':
+      return 'bg-amber-50 border-amber-250 text-amber-900 dark:bg-yellow-500/10 dark:border-yellow-500/30 dark:text-yellow-300';
+    default:
+      return 'bg-white border-zinc-200 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white/80';
+  }
+}
+
+function normalizeStatus(s: any) {
+  return String(s || '').trim().toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace('validación', 'validacion')
+    .replace('en horno', 'horno')
+    .replace('en_transporte', 'en transporte');
+}
+
+function buildSteps(serviceType?: string) {
+  const isDelivery = String(serviceType ?? '').toLowerCase() === 'delivery';
+  return isDelivery
+    ? ['Registrado', 'En horno', 'Listo', 'Empaque final', 'En camino', 'Entregado']
+    : ['Registrado', 'En horno', 'Listo', 'Empaque final', 'Recogido'];
+}
+
+function stepIndexFor(status: string, serviceType?: string) {
+  const s = normalizeStatus(status);
+  const isDelivery = String(serviceType ?? '').toLowerCase() === 'delivery';
+  // Estados de solicitud: se consideran como 'Registrado'
+  if (s === 'nuevo' || s === 'en revisión' || s === 'aprobado') return 0;
+  if (s === 'pendiente') return 0;
+  if (s === 'horno') return 1;
+  if (s === 'listo') return 2;
+  if (s === 'en empaquetado' || s === 'empaque final') return 3;
+  if (s === 'en transporte' || s === 'en camino') return isDelivery ? 4 : 3;
+  if (s === 'entregado') return isDelivery ? 5 : 4;
+  if (s === 'recogido') return 4;
+  return 0;
+}
+
+function estimateStepMinutes(totalMinutes: number | string | null | undefined, steps: string[]) {
+  const total = Number(totalMinutes ?? 0);
+  if (!Number.isFinite(total) || total <= 0) return steps.map(() => null as number | null);
+  const isDelivery = steps.includes('En camino');
+  const weights = isDelivery
+    ? [0.05, 0.55, 0.10, 0.10, 0.20, 0]
+    : [0.05, 0.65, 0.10, 0.20, 0];
+  const mins = steps.map((_, i) => {
+    const w = weights[i] ?? 0;
+    const v = Math.max(0, Math.round(total * w));
+    return i === steps.length - 1 ? 0 : v;
+  });
+  const lastIdx = Math.max(0, steps.length - 2);
+  const sum = mins.slice(0, steps.length - 1).reduce((a, b) => a + (b ?? 0), 0);
+  const diff = sum - total;
+  if (diff > 0) mins[lastIdx] = Math.max(0, (mins[lastIdx] ?? 0) - diff);
+  return mins.map((m, i) => (i === steps.length - 1 ? null : m));
+}
+
+function TrackInner() {
+  const { token } = useParams();
+  const navigate = useNavigate();
+
+  // --- TEMA CLARO Y OSCURO DINÁMICO ---
+  const [theme, setTheme] = useState(() => {
+    try {
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    if (nextTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
+  // Contacto global (configurable en Admin) para apoyar al cliente desde /track
+  const [storePhone, setStorePhone] = useState<string>('');
+  const [storeWa, setStoreWa] = useState<string>('');
+
+  useEffect(() => {
+    let alive = true;
+    fetchPedidoConfigMap()
+      .then((c) => {
+        if (!alive) return;
+        const phone = String((c as any)?.store_phone ?? (c as any)?.pedido_contact_phone ?? (c as any)?.pedido_phone ?? (c as any)?.telefono_tienda ?? (c as any)?.promo_phone ?? '').trim();
+        const wa = String((c as any)?.store_wa ?? (c as any)?.pedido_contact_wa ?? (c as any)?.pedido_wa ?? (c as any)?.promo_wa_number ?? (c as any)?.wa_number ?? '').trim();
+        setStorePhone(phone);
+        setStoreWa(wa || STORE_WA_NUMBER);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setStoreWa(STORE_WA_NUMBER);
+      });
+    return () => { alive = false; };
+  }, []);
+
+  const [codeInput, setCodeInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [autoUpdating, setAutoUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string>('');
+  const [toastTone, setToastTone] = useState<'info' | 'warn' | 'ok' | 'danger'>('info');
+  const [showToast, setShowToast] = useState(false);
+  const lastStatusRef = useRef<string>('');
+  const inFlightRef = useRef(false);
+  const lastFetchRef = useRef(0);
+  const subscribedRef = useRef(false);
+  const [request, setRequest] = useState<any>(null);
+  const [order, setOrder] = useState<any>(null);
+
+  const effective = (token || '').trim();
+  const numericId = useMemo(() => { try { return fromTrackCode(effective); } catch { return null; } }, [effective]);
+
+  const showToastSafe = (msg: string, tone: 'info' | 'warn' | 'ok' | 'danger' = 'info') => {
+  setToastMsg(msg);
+  setToastTone(tone);
+  setShowToast(true);
+  window.setTimeout(() => setShowToast(false), 2500);
+};
+
+const copy = async (text: string) => {
+  try {
+
+// 0) Intentar lookup seguro por RPC (si existe)
+try {
+  const p_public_token = isUuid(effective) ? effective : null;
+  const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_track_lookup', {
+    p_request_id: numericId !== null ? numericId : null,
+    p_public_token: p_public_token,
+  });
+  if (!rpcErr && rpcData?.ok && rpcData.request) {
+    setRequest(rpcData.request);
+    if (rpcData.order) setOrder(rpcData.order);
+    return;
+  }
+} catch {
+  // si no existe la RPC o falla, seguimos con selects directos
+}
+
+    await navigator.clipboard.writeText(text);
+    showToastSafe('Código copiado', 'ok');
+  } catch {
+    // ignore
+  }
+};
+
+  
+const load = async (opts?: { silent?: boolean }) => {
+  const silent = opts?.silent ?? false;
+  if (!effective) return;
+
+  const now = Date.now();
+  const minGap = silent ? 1200 : 400;
+  if (now - lastFetchRef.current < minGap) return;
+  lastFetchRef.current = now;
+
+  if (inFlightRef.current) return;
+  inFlightRef.current = true;
+
+  const shouldShowLoading = !silent && !request && !order;
+  if (shouldShowLoading) setLoading(true);
+  if (!silent) setError(null);
+
+  try {
+      // 1) Track estable: id de order_requests
+      if (numericId !== null) {
+        const { data: r, error: e1 } = await supabase.from('order_requests').select('*').eq('id', numericId).single();
+        if (!e1 && r) {
+          const mapped = (r as any).mapped_order_id;
+          // Si ya existe un pedido (orders) asociado, el tracking NO debe expirar por 72h.
+          if (mapped) {
+            setRequest(r);
+            const { data: o } = await supabase.from('orders').select('*').eq('id', mapped).single();
+            if (o) setOrder(o);
+            else setOrder(null);
+            return;
+          }
+          // Solo aplica ventana de 72h para solicitudes que aún NO fueron atendidas/convertidas.
+          if (isOlderThanHours((r as any).created_at, MAX_TRACK_HOURS)) {
+            setRequest(null);
+            setOrder(null);
+            setError('Seguimiento ya no está disponible (máximo 72 horas).');
+            return;
+          }
+          setError(null);
+
+          setRequest(r);
+          setError(null);
+
+          setOrder(null);
+          return;
+        }
+      }
+
+      
+
+      // 2) También permitir buscar por ID de pedido (orders)
+      // (útil cuando el usuario pega la Solicitud/ID del pedido, o un código base36 que corresponde a orders.id)
+      if (numericId !== null) {
+        const { data: o2, error: e2 } = await supabase.from('orders').select('*').eq('id', numericId).single();
+        if (!e2 && o2) {
+          setError(null);
+
+          setOrder(o2);
+          setError(null);
+
+          setRequest(null);
+          return;
+        }
+      }
+
+      // 3) Compat token UUID (public_token)
+      if (isUuid(effective)) {
+        const { data: r2, error: e3 } = await supabase.from('order_requests').select('*').eq('public_token', effective).single();
+        if (!e3 && r2) {
+          const mapped = (r2 as any).mapped_order_id;
+          // Si ya existe pedido asociado, NO expira por 72h.
+          if (mapped) {
+            setRequest(r2);
+            const { data: o } = await supabase.from('orders').select('*').eq('id', mapped).single();
+            if (o) setOrder(o);
+            else setOrder(null);
+            return;
+          }
+          // Solo expira solicitudes no atendidas
+          if (isOlderThanHours((r2 as any).created_at, MAX_TRACK_HOURS)) {
+            setRequest(null);
+            setOrder(null);
+            setError('Seguimiento ya no está disponible (máximo 72 horas).');
+            return;
+          }
+          setError(null);
+
+          setRequest(r2);
+          setError(null);
+
+          setOrder(null);
+          return;
+        }
+      }
+
+      setRequest(null);
+      setOrder(null);
+      setError('No encontramos ese código. Revisa e intenta nuevamente.');
+    } catch {
+      setError('Error al consultar seguimiento.');
+    } finally {
+      if (shouldShowLoading) setLoading(false);
+      inFlightRef.current = false;
+    }
+  };
+
+  // Carga inicial al abrir un link /track/:token
+useEffect(() => {
+  subscribedRef.current = false;
+  setAutoUpdating(false);
+  setError(null);
+  setRequest(null);
+  setOrder(null);
+  if (token) load({ silent: false });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [token]);
+
+  // Suscripción en tiempo real para actualizar automáticamente (y fallback por polling)
+useEffect(() => {
+  const reqId = request?.id ? Number(request.id) : null;
+  const ordId = order?.id ? Number(order.id) : null;
+
+  if (!reqId && !ordId) return;
+
+  let poll: any = null;
+  const startPolling = () => {
+    if (poll) return;
+    poll = window.setInterval(() => load({ silent: true }), 7000);
+  };
+
+  const channels: any[] = [];
+
+  const onStatus = (status: string) => {
+    if (status === 'SUBSCRIBED') {
+      subscribedRef.current = true;
+      setAutoUpdating(true);
+      if (poll) {
+        clearInterval(poll);
+        poll = null;
+      }
+    }
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      subscribedRef.current = false;
+      setAutoUpdating(false);
+      startPolling();
+    }
+  };
+
+  const watchdog = window.setTimeout(() => {
+    if (!subscribedRef.current) startPolling();
+  }, 3000);
+
+  if (reqId) {
+    const chReq = supabase
+      .channel(`track_req_${reqId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_requests', filter: `id=eq.${reqId}` }, () => load({ silent: true }))
+      .subscribe(onStatus);
+    channels.push(chReq);
+  }
+
+  if (ordId) {
+    const chOrd = supabase
+      .channel(`track_order_${ordId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `id=eq.${ordId}` }, () => load({ silent: true }))
+      .subscribe(onStatus);
+    channels.push(chOrd);
+  }
+
+  load({ silent: true });
+
+  return () => {
+    window.clearTimeout(watchdog);
+    if (poll) clearInterval(poll);
+    setAutoUpdating(false);
+    channels.forEach((c) => {
+      try { supabase.removeChannel(c); } catch {}
+    });
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [request?.id, order?.id, token]);
+
+  const requestId = request?.id ? Number(request.id) : null;
+  const orderId = order?.id ? Number(order.id) : null;
+
+  const createdAt = (order?.created_at ?? request?.created_at) as any;
+  const expired = isOlderThanHours(createdAt, MAX_TRACK_HOURS);
+  const expiredMsg = 'Seguimiento ya no está disponible (máximo 72 horas).';
+  const stableId = orderId ?? requestId;
+  const trackCode = stableId !== null ? toTrackCode(stableId) : '';
+
+  const status = order?.status || request?.status || '';
+const dataSafe: any = (order ?? request);
+  const serviceType = order?.service_type || request?.service_type || '';
+
+  // Meta dinámica para "Listo": aclara que salió del horno y qué sigue
+  const norm = normalizeStatus(status);
+  const isDelivery = String(serviceType).toLowerCase() === 'delivery';
+  useEffect(() => {
+    if (!norm) return;
+    if (lastStatusRef.current && lastStatusRef.current !== norm) {
+      if (norm === 'pendiente') showToastSafe('Pedido pendiente de confirmación', 'warn');
+    }
+    lastStatusRef.current = norm;
+  }, [norm]);
+
+  const listoMeta: StatusMeta = {
+  title: 'Listo',
+  desc: isDelivery
+    ? 'Tu pedido salió del horno. Ahora pasa al empaque final y reparto.'
+    : 'Tu pedido salió del horno. Ahora pasa al empaque final para recojo.',
+  tone: 'ok',
+};
+const empaqueFinalMeta: StatusMeta = {
+  title: 'Empaque final',
+  desc: isDelivery
+    ? 'Empaque final en curso. En breve pasará a “En camino”.'
+    : 'Empaque final en curso. Ya casi está listo para recojo.',
+  tone: 'info',
+};
+const meta = (norm === 'listo')
+  ? listoMeta
+  : (norm === 'en empaquetado' || norm === 'empaque final')
+    ? empaqueFinalMeta
+    : (STATUS_META[norm] ?? { title: 'Estado actualizado', desc: 'Tu pedido está en proceso. Si necesitas ayuda, contáctanos.', tone: 'info' as const });
+
+  const steps = buildSteps(serviceType);
+  const stepMins = estimateStepMinutes(order?.estimated_minutes ?? request?.estimated_minutes, steps);
+  const stepIdx = stepIndexFor(status, serviceType);
+  const clampedIdx = Math.max(0, Math.min(stepIdx, steps.length - 1));
+  const progressPct = Math.round(((clampedIdx + 1) / steps.length) * 100);
+
+  const items: any[] = (order?.items || request?.items || []) as any[];
+  const delivery = Number(order?.delivery_cost ?? request?.delivery_fee ?? 0);
+  const total = Number(order?.total ?? request?.estimated_total ?? 0);
+  const subtotal = Math.max(0, total - (isDelivery ? delivery : 0));
+
+  const clientName = order?.client_name || request?.customer_name || '';
+  const phone = order?.client_phone || request?.phone || '';
+  const address = order?.client_address || request?.address || '';
+  const notes = order?.notes || request?.notes || '';
+
+  
+  const supportTel = storePhone ? `tel:${normalizeTel(storePhone)}` : '';
+  const trackRef = String(token ?? '').trim();
+  const waMsg = `Hola, necesito ayuda con mi pedido. Código: ${trackRef}`.trim();
+  const supportWaHref = storeWa ? buildWhatsAppLink(waMsg, storeWa) : '';
+return (
+    <div className="min-h-screen bg-slate-50 text-zinc-900 dark:bg-[#0f0f10] dark:text-white transition-colors duration-300">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0f0f10]/85 backdrop-blur border-b border-zinc-200 dark:border-white/10 transition-colors duration-300 shadow-sm">
+        <div className="max-w-2xl mx-auto p-4 flex items-center justify-between">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 border border-zinc-200 dark:border-white/5 flex items-center gap-2 text-sm font-black text-zinc-800 dark:text-white transition" 
+            type="button"
+          >
+            <ArrowLeft size={16}/> Volver
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2.5 rounded-xl border border-zinc-200 dark:border-white/15 bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 transition text-zinc-850 dark:text-white flex items-center justify-center shadow-sm"
+              title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+            </button>
+            <Link to="/pedido" className="text-sm font-extrabold text-orange-500 dark:text-orange-400 hover:text-orange-600 transition">Hacer pedido</Link>
+          </div>
+        </div>
+      </header>
+
+      {(supportTel || supportWaHref) && (
+        <div className="max-w-2xl mx-auto px-4 pt-5">
+          <div className="rounded-3xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 p-5 shadow-sm transition-colors">
+            <div className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-white/60 mb-3">¿Necesitas ayuda con tu pedido?</div>
+            <div className="grid grid-cols-2 gap-3">
+              {supportTel && (
+                <a
+                  href={supportTel}
+                  className="px-4 py-3 rounded-2xl bg-zinc-100 hover:bg-zinc-250 dark:bg-white/10 dark:hover:bg-white/20 border border-zinc-200 dark:border-white/10 flex items-center justify-center gap-2 font-black text-sm text-zinc-800 dark:text-white transition-all"
+                >
+                  <PhoneCall size={18} className="text-orange-500 dark:text-orange-400" /> Llamar
+                </a>
+              )}
+              {supportWaHref && (
+                <a
+                  href={supportWaHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/20 dark:border-green-500/30 flex items-center justify-center gap-2 font-black text-sm text-emerald-700 dark:text-green-300 transition-all"
+                >
+                  <MessageCircle size={18} /> WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-2xl mx-auto p-4 pb-28">
+        {/* Región accesible para mensajes no intrusivos */}
+        <div aria-live="polite" className="sr-only" role="status">{showToast ? toastMsg : ''}</div>
+        {/* Toast visual minimalista */}
+        {showToast && (
+          <div className={"fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-3 rounded-xl border border-zinc-200 dark:border-white/10 shadow-lg text-sm z-50 \n            " + (toastTone === 'ok' ? 'bg-green-600 text-white' : toastTone === 'warn' ? 'bg-yellow-600 text-black font-bold' : toastTone === 'danger' ? 'bg-red-650 text-white' : 'bg-black/90 text-white')} role="status" aria-live="polite">
+            {toastMsg}
+          </div>
+        )}
+        
+        <div className="flex items-center justify-between gap-3 mt-2">
+          <h1 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-white">Seguimiento</h1>
+          {autoUpdating && (
+            <div className="text-xs text-emerald-650 dark:text-emerald-400 font-extrabold flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"/> En vivo</div>
+          )}
+        </div>
+
+        {/* Buscador */}
+        <div className="mt-4 bg-white border border-zinc-200 dark:bg-white/5 dark:border-white/10 rounded-3xl p-5 shadow-sm transition-colors">
+          <label htmlFor="track-code" className="text-xs text-slate-500 dark:text-white/60 font-black uppercase tracking-wider block" id="track-help">Ingresa tu código de seguimiento</label>
+          <div className="flex gap-2 mt-2">
+            <input
+              id="track-code"
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ''))}
+              placeholder="Ej: 9IX"
+              className="flex-1 bg-transparent border border-zinc-250 dark:border-white/10 rounded-2xl px-4 py-2.5 outline-none text-zinc-900 dark:text-white focus:border-orange-500/80 transition text-sm font-bold"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const v = codeInput.trim();
+                if (!v) {
+                  showToastSafe('Ingresa un código de seguimiento', 'warn');
+                  return;
+                }
+                navigate(`/track/${v}`);
+              }}
+              className="px-5 py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 font-black text-sm text-white flex items-center gap-2 transition"
+            >
+              <Search size={16}/> Buscar
+            </button>
+          </div>
+        </div>
+
+        {loading && <div className="mt-4 text-orange-500 dark:text-orange-400 font-extrabold animate-pulse" role="status" aria-busy="true">Buscando pedido...</div>}
+        {error && <div className="mt-4 text-red-500 font-bold bg-red-500/10 border border-red-550/20 p-4 rounded-2xl" role="alert">{error}</div>}
+
+        {(order || request) && (
+          <div className="mt-4 space-y-4">
+            {/* Resumen */}
+            <div className={`border-2 rounded-3xl p-5 shadow-md transition-all ${toneClasses(meta.tone)}`}>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider opacity-75">Código de Pedido</div>
+                  <div className="text-2xl font-black tracking-wider mt-1">{toSolicitudId(stableId)}</div>
+                  <div className="text-xs opacity-75 mt-1.5 flex items-center gap-1.5">
+                    Código corto: <span className="font-mono font-black">{trackCode}</span>
+                  </div>
+                </div>
+                <button onClick={() => copy(toSolicitudId(stableId))} className="px-3.5 py-2 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 flex items-center gap-1.5 text-xs font-black transition-all" type="button">
+                  <ClipboardCopy size={14}/> Copiar
+                </button>
+              </div>
+
+              <div className="mt-4 border-t border-current/10 pt-4">
+                <div className="font-black text-xl leading-tight">{meta.title}</div>
+                <div className="text-sm opacity-90 mt-2 leading-relaxed whitespace-normal break-words max-w-full leading-snug">{meta.desc}</div>
+                
+                {String(dataSafe?.status || '').toLowerCase() === 'rechazado' && dataSafe?.reject_reason?.trim() && (
+                  <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-950 dark:text-rose-100 shadow-sm leading-relaxed animate-in fade-in duration-200">
+                    <div className="font-black flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> Motivo del rechazo</div>
+                    <div className="mt-1.5 whitespace-pre-wrap break-words">{dataSafe?.reject_reason}</div>
+                  </div>
+                )}
+
+                {norm === 'pendiente' && (
+                  <div className="mt-4 border rounded-2xl p-4 bg-amber-500/10 border-amber-500/20 text-amber-950 dark:text-amber-200 text-sm leading-relaxed">
+                    <b>Pendiente de confirmación:</b> Estamos validando tu pedido. En breve lo confirmaremos o te contactaremos si falta algún dato.
+                  </div>
+                )}
+              </div>
+
+              {/* Progreso */}
+              <div className="mt-6 border-t border-current/10 pt-4">
+                <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-black uppercase tracking-wider gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {steps.map((s, idx) => {
+                    const active = idx <= stepIdx;
+                    return (
+                      <span key={s} className={`text-center shrink-0 min-w-[50px] leading-tight ${active ? 'text-orange-650 dark:text-orange-300 font-black' : 'text-slate-400 dark:text-white/40'}`}>
+                        {s}
+                        {stepMins?.[idx] != null && (
+                          <span className="block text-[9px] opacity-75 font-normal">≈{stepMins[idx]}m</span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div className="mt-2.5 h-2 rounded-full bg-black/10 dark:bg-black/40 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-1000"
+                    role="progressbar" aria-label="Progreso del pedido" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct} style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* IDs */}
+              <div className="mt-5 border-t border-current/10 pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold opacity-75">
+                {requestId !== null && (
+                  <div className="flex items-center gap-1.5"><Package size={14}/> Solicitud (ID): <span className="font-black">{requestId}</span></div>
+                )}
+                {orderId !== null && (
+                  <div className="flex items-center gap-1.5"><Bike size={14}/> Pedido (ID): <span className="font-black">{orderId}</span></div>
+                )}
+              </div>
+            </div>
+
+            {/* Detalle */}
+            <div className="bg-white border border-zinc-200 dark:bg-[#1E1E1E]/80 dark:border-white/10 rounded-3xl p-5 shadow-sm transition-colors">
+              <div className="font-black text-lg mb-3 border-b border-zinc-150 dark:border-white/5 pb-2">Detalle del pedido</div>
+              {items.length === 0 ? (
+                <div className="text-slate-500 dark:text-white/60 text-sm">Sin detalle disponible.</div>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  {items.map((i: any) => (
+                    <div key={i.id || i.name} className="flex justify-between border-b border-zinc-150 dark:border-white/5 pb-2 last:border-0 whitespace-normal break-words max-w-full leading-snug">
+                      <span className="text-zinc-800 dark:text-white/90 font-bold whitespace-normal break-words max-w-full leading-snug">{i.qty} x {i.name}</span>
+                      <span className="text-zinc-650 dark:text-white/80 font-mono font-bold">{money(Number(i.price) * Number(i.qty))}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Concepto de envío (solo Delivery) */}
+              {isDelivery && (
+                <div className="flex justify-between border-b border-zinc-150 dark:border-white/5 py-3 text-sm">
+                  <span className="text-zinc-800 dark:text-white/90 font-bold">Concepto: Envío</span>
+                  <span className="text-zinc-650 dark:text-white/80 font-mono font-bold">{money(delivery)}</span>
+                </div>
+              )}
+
+              <div className="mt-4 bg-zinc-100 dark:bg-black/35 rounded-2xl p-4 border border-zinc-200 dark:border-transparent">
+                <div className="flex justify-between text-sm text-slate-650 dark:text-white/80"><span>Subtotal</span><span className="font-mono font-bold">{money(subtotal)}</span></div>
+                {isDelivery && (
+                  <div className="flex justify-between text-sm text-slate-650 dark:text-white/80 mt-1.5"><span>Costo de envío</span><span className="font-mono font-bold">{money(delivery)}</span></div>
+                )}
+                <div className="flex justify-between font-black text-lg mt-3 border-t border-zinc-300 dark:border-white/5 pt-2"><span>Total</span><span className="text-orange-650 dark:text-orange-400 font-mono">{money(total)}</span></div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+class TrackErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any) {
+    // Log para diagnóstico sin romper UX
+    console.error('[TrackErrorBoundary]', error);
+  }
+  render() {
+    if (this.state.hasError) {
+      const msg = String((this.state.error && (this.state.error.message || this.state.error.toString())) || 'Error desconocido');
+      const stack = String((this.state.error && (this.state.error.stack || '')) || '');
+      const full = stack ? (msg + "\n\n" + stack) : msg;
+      const copyErr = async () => {
+        try { await navigator.clipboard.writeText(full); } catch {}
+      };
+      return (
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-4 text-white">
+            <div className="text-lg font-semibold">Ocurrió un error</div>
+            <div className="mt-1 text-sm text-white/70">Este error viene de la pantalla Track. Copia el detalle y envíamelo para corregirlo sin romper nada.</div>
+
+            <div className="mt-3 rounded-lg bg-black/30 p-3 text-xs text-white/80">
+              <div className="font-semibold text-white">Detalle:</div>
+              <div className="mt-1 whitespace-pre-wrap break-words">{msg}</div>
+            </div>
+
+            {stack && (
+              <details className="mt-3 rounded-lg bg-black/20 p-3 text-xs text-white/75">
+                <summary className="cursor-pointer font-medium text-white/90">Ver stack</summary>
+                <pre className="mt-2 whitespace-pre-wrap break-words">{stack}</pre>
+              </details>
+            )}
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-medium text-white" onClick={() => location.reload()}>Refrescar</button>
+              <a className="rounded-lg bg-white/10 px-3 py-2 text-sm text-center" href="/promo">Ir a /promo</a>
+              <button className="col-span-2 rounded-lg bg-emerald-600/90 px-3 py-2 text-sm font-medium text-white" onClick={() => { void copyErr(); }}>Copiar error</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children as any;
+  }
+}
+
+export default function Track() {
+  const [storeWaFooter, setStoreWaFooter] = useState<string>('');
+
+  useEffect(() => {
+    let alive = true;
+
+    fetchPedidoConfigMap()
+      .then((c) => {
+        if (!alive) return;
+        const wa = String(
+          (c as any)?.store_wa ??
+          (c as any)?.pedido_contact_wa ??
+          (c as any)?.pedido_wa ??
+          (c as any)?.promo_wa_number ??
+          (c as any)?.wa_number ??
+          ''
+        ).trim();
+
+        setStoreWaFooter(wa || SUPPORT_WHATSAPP);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setStoreWaFooter(SUPPORT_WHATSAPP);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const supportWaHref = storeWaFooter
+    ? buildWhatsAppLink('Hola, tengo una queja o sugerencia sobre mi pedido.', storeWaFooter)
+    : SUPPORT_WHATSAPP_HREF;
+
+  return (
+    <TrackErrorBoundary>
+      <>
+        <TrackInner />
+        <a
+          href={supportWaHref || SUPPORT_WHATSAPP_HREF}
+          target="_blank"
+          rel="noreferrer"
+          className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-emerald-500/30 dark:border-emerald-400/30 bg-[#064e3b] dark:bg-gradient-to-r dark:from-emerald-500/20 dark:to-cyan-500/15 px-4 py-3 text-center text-sm font-black text-white dark:text-emerald-50 shadow-[0_20px_50px_-30px_rgba(16,185,129,0.9)] backdrop-blur-sm transition hover:scale-[1.01]"
+        >
+          Quejas y sugerencias • WhatsApp
+        </a>
+      </>
+    </TrackErrorBoundary>
+  );
+}

@@ -1,0 +1,6 @@
+Promo.tsx: added todayTitle from cfg.promo_today_title
+Promo.tsx: replaced heading with todayTitle
+Promo.tsx: added heroImg variables
+Promo.tsx: inserted hero image block
+CustomerOrder.tsx: inserted sales hero in main return
+CustomerOrder.tsx: inserted optional product image block

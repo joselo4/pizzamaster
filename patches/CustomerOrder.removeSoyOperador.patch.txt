@@ -1,0 +1,16 @@
+// === PATCH quirúrgico para src/pages/CustomerOrder.tsx ===
+// Objetivo: quitar el botón "Soy operador" de la vista cliente.
+//
+// Busca este bloque (puede variar un poco):
+//
+// <button onClick={() => navigate('/login')} ...>
+//   <span ...> ... Soy operador ...</span>
+// </button>
+//
+// Elimínalo completo.
+//
+// Importante:
+// - NO borres la ruta /login del router.
+// - NO cambies lógica de pedidos.
+//
+// === FIN PATCH ===

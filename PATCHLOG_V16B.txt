@@ -1,0 +1,25 @@
+pedidoConfig.ts: added pedido_enabled/message + phone/wa keys
+CustomerOrder.tsx: added state pedidoEnabled/message + storePhone/storeWa
+CustomerOrder.tsx: added refs for category logic
+CustomerOrder.tsx: mark promo param ref
+CustomerOrder.tsx: applyConfig sets enabled/message/contact + applies default category
+CustomerOrder.tsx: category clicks mark userChosen
+CustomerOrder.tsx: added full-screen closed UI
+CustomerOrder.tsx: submit blocked when disabled
+AdminPedidoSettings.tsx: added constants pedidos + contact
+AdminPedidoSettings.tsx: added states pedidoEnabled/message + storeWa
+AdminPedidoSettings.tsx: save includes pedidos enabled/message + contact keys
+AdminPedidoSettings.tsx: inserted Atención/Pedidos + global contact UI
+AdminPromoToday.tsx: added/updated with preview
+admin.tsx: imported AdminPromoToday
+admin.tsx: added promo-hoy tab
+admin.tsx: label promo-hoy
+admin.tsx: renders AdminPromoToday
+admin.tsx: added access_validation permission
+Promo.tsx: imported listActivePromotions
+Promo.tsx: added dbPromos state
+Promo.tsx: added todayTitle/imageOverride/featuredSlug
+Promo.tsx: added featuredPromo selector
+Promo.tsx: added heroImgUnified
+Promo.tsx: Tu promo de hoy uses image override or promo image
+App.tsx: /pedidos alias added

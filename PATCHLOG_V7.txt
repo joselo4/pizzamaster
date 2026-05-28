@@ -1,0 +1,23 @@
+vite.config.ts: dedupe + HMR ws 127.0.0.1
+App.tsx: /pedidos alias
+pedidoConfig.ts: include pedido_enabled/message + contact
+AdminPedidoSettings.tsx: added constants pedido_enabled
+AdminPedidoSettings.tsx: added state pedidoEnabled/message
+AdminPedidoSettings.tsx: load sets default category + enabled/message
+AdminPedidoSettings.tsx: save includes enabled/message
+AdminPedidoSettings.tsx: added Atención/Pedidos UI + save button
+CustomerOrder.tsx: added refs
+CustomerOrder.tsx: mark promo param
+CustomerOrder.tsx: added enabled/message/contact states
+CustomerOrder.tsx: category clicks mark userChosen
+CustomerOrder.tsx: block submit if disabled
+CustomerOrder.tsx: added banner
+CustomerOrder.tsx: added sticky CTA
+Promos.tsx: import useMemo
+Promos.tsx: use config cache
+Promos.tsx: cfg state
+Promos.tsx: refresh cfg in effect
+Promos.tsx: featured promo logic
+Promos.tsx: inserted featured section
+Promo.tsx: added sticky CTA
+admin.tsx: added access_validation permission

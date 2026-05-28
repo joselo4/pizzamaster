@@ -1,0 +1,13 @@
+AdminPromoToday.tsx added
+Promos.tsx: import useMemo
+AdminPedidoSettings: keys pedido_enabled added
+AdminPedidoSettings: state pedidoEnabled added
+AdminPedidoSettings: save uses text_value (no bool_value)
+AdminPedidoSettings: UI Atención/Pedidos added
+CustomerOrder: state pedidoEnabled added
+CustomerOrder: submit blocked
+CustomerOrder: banner added
+admin.tsx: import AdminPromoToday
+admin.tsx: tab promo-hoy
+admin.tsx: label promo-hoy
+admin.tsx: render AdminPromoToday

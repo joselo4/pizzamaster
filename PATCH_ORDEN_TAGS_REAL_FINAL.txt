@@ -1,0 +1,6 @@
+Cambios incluidos:
+- /pedido lee directamente Supabase config.pedido_categories.
+- /pedido respeta primero el orden guardado en Admin.
+- Admin guarda pedido_categories en text_value y limpia numeric_value=null.
+- Admin permite ordenar tags con drag/drop y flechas ← →.
+- Se incluye supabase_sql/34_fix_pedido_categories_order.sql.

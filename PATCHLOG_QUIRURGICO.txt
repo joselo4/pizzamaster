@@ -1,0 +1,15 @@
+vite.config.ts: added dedupe + HMR ws 127.0.0.1
+Added AdminPromoToday.tsx
+admin.tsx: added 6th permission access_validation
+admin.tsx: imported AdminPromoToday
+admin.tsx: added promo-hoy tab
+admin.tsx: label for promo-hoy
+admin.tsx: renders AdminPromoToday
+AdminPedidoSettings: added pedido_enabled keys
+AdminPedidoSettings: added states pedidoEnabled/message
+AdminPedidoSettings: save includes pedido_enabled/message (text_value)
+AdminPedidoSettings: inserted Atención/Pedidos UI + save button
+CustomerOrder: added pedidoEnabled states
+CustomerOrder: blocks submit when disabled
+CustomerOrder: added banner
+Promos.tsx: imported useMemo

@@ -1,0 +1,16 @@
+AdminPedidoSettings.tsx: added constants pedido_enabled/message
+AdminPedidoSettings.tsx: added state pedidoEnabled/message
+AdminPedidoSettings.tsx: save includes enabled/message
+AdminPedidoSettings.tsx: inserted Atención/Pedidos UI + explicit save
+pedidoConfig.ts: added pedido_enabled/message + contact keys
+App.tsx: added /pedidos alias
+CustomerOrder.tsx: added refs for category logic
+CustomerOrder.tsx: mark promo param ref
+CustomerOrder.tsx: added pedidoEnabled/message/contact state
+CustomerOrder.tsx: applyConfig sets enabled/message/contact + default category
+CustomerOrder.tsx: category clicks mark user chosen
+CustomerOrder.tsx: block submit when disabled
+CustomerOrder.tsx: added disabled banner
+CustomerOrder.tsx: added mobile sticky CTA
+Promo.tsx: added sticky CTA bar
+admin.tsx: added access_validation permission

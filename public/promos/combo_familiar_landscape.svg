@@ -1,0 +1,23 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='600' viewBox='0 0 1600 600'>
+  <defs>
+    <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+      <stop offset='0' stop-color='#EF4444'/>
+      <stop offset='1' stop-color='#111827'/>
+    </linearGradient>
+  </defs>
+  <rect width='1600' height='600' fill='url(#g)'/>
+  <g opacity='0.10'>
+    <circle cx='1232.0' cy='288.0' r='240' fill='#fff'/>
+    <circle cx='1312.0' cy='336.00000000000006' r='180' fill='#F59E0B'/>
+    <circle cx='1376.0' cy='372.0' r='140' fill='#fff'/>
+  </g>
+  <text x='80' y='90' font-family='Arial, Helvetica, sans-serif' font-size='40' font-weight='900' fill='rgba(255,255,255,0.9)'>PizzaMaster</text>
+  
+        <rect x='48' y='44' width='200' height='64' rx='12' fill='#F59E0B'/>
+        <text x='148' y='88' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='32' font-weight='900' fill='#111827'>TOP VENTA</text>
+        
+  <text x='80' y='240' font-family='Arial, Helvetica, sans-serif' font-size='132' font-weight='900' fill='#fff'>TOP VENTA</text>
+  <text x='84' y='318' font-family='Arial, Helvetica, sans-serif' font-size='52' font-weight='700' fill='rgba(255,255,255,0.92)'>Ideal para 4 personas</text>
+  <text x='1520' y='480' text-anchor='end' font-family='Arial, Helvetica, sans-serif' font-size='112' font-weight='900' fill='#fff'>S/ 39.90</text>
+  <text x='80' y='570' font-family='Arial, Helvetica, sans-serif' font-size='18' fill='rgba(255,255,255,0.75)'>Válido hoy. 2x1 aplica a pizzas del mismo tamaño. Sujeto a stock.</text>
+</svg>

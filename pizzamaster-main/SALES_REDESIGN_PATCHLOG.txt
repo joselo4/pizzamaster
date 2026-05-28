@@ -1,0 +1,12 @@
+Promo.tsx: inserted hero helpers
+Promo.tsx: injected hero background
+Promo.tsx: trust section NOT inserted (cta marker not found)
+Promo.tsx: promo card image NOT inserted (promos.map not found)
+Promo.tsx: added FAQ conversion section
+Promos.tsx: added search state
+Promos.tsx: hero UI NOT inserted
+Promos.tsx: card image NOT inserted (card div not found)
+Promos.tsx: filterPromos NOT applied (promos.map not found)
+CustomerOrder.tsx: inserted hero section
+CustomerOrder.tsx: product image NOT inserted (product.name not found)
+CustomerOrder.tsx: added conversion footer

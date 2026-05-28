@@ -1,0 +1,61 @@
+{
+  "note": "Plantilla de referencia. Sustituye ZONE_ID/dominio y valida expresiones en Cloudflare antes de aplicar.",
+  "ssl_tls": {
+    "mode": "full_strict",
+    "always_use_https": true,
+    "hsts": {
+      "enabled_when_https_verified": true,
+      "max_age": 31536000,
+      "include_subdomains": true,
+      "preload": true
+    }
+  },
+  "waf": {
+    "managed_rules": [
+      "Cloudflare Managed Ruleset",
+      "Cloudflare OWASP Core Ruleset"
+    ],
+    "suspicious_traffic_action": "managed_challenge"
+  },
+  "rate_limiting": [
+    {
+      "path": "/login*",
+      "period_seconds": 60,
+      "requests": 10,
+      "mitigation_timeout_seconds": 600,
+      "action": "managed_challenge"
+    },
+    {
+      "path": "/admin*",
+      "period_seconds": 60,
+      "requests": 10,
+      "mitigation_timeout_seconds": 600,
+      "action": "managed_challenge"
+    },
+    {
+      "path": "/api/*",
+      "period_seconds": 60,
+      "requests": 120,
+      "mitigation_timeout_seconds": 600,
+      "action": "managed_challenge"
+    }
+  ],
+  "sensitive_paths_blocked_in_static_hosting": [
+    "/.env",
+    "/.env*",
+    "/.git",
+    "/.git/*",
+    "/wp-admin",
+    "/wp-admin/*",
+    "/phpmyadmin",
+    "/phpmyadmin/*",
+    "/adminer",
+    "/adminer*",
+    "/database.sql",
+    "/backup.zip"
+  ],
+  "country_blocking": {
+    "applied": false,
+    "reason": "Solo activar si el negocio no necesita tráfico internacional."
+  }
+}

@@ -1,0 +1,19 @@
+SOLUCIÓN REAL AL ORDEN DE TAGS EN /pedido Y /pedidos
+
+Causa encontrada:
+- /pedido usaba src/lib/pedidoConfig.ts con esta prioridad: numeric_value ?? text_value.
+- Si config.pedido_categories tenía numeric_value=0, /pedido leía 0 en vez del JSON de text_value.
+- Resultado: parseaba mal y volvía al orden por defecto aunque Admin mostrara el orden correcto.
+
+Correcciones:
+1) src/lib/pedidoConfig.ts ahora prioriza text_value sobre numeric_value.
+2) Admin > Productos guarda pedido_categories en text_value y limpia numeric_value=null.
+3) /pedido y /pedidos refrescan la configuración y respetan primero config.pedido_categories.
+4) Los tags se auto-guardan al soltar al arrastrarlos.
+5) Se agregó supabase_sql/34_fix_pedido_categories_order.sql para limpiar numeric_value y verificar el orden.
+
+Después de desplegar, ejecutar en Supabase SQL Editor:
+update public.config set numeric_value = null where key = 'pedido_categories';
+
+Luego revisar:
+select key, text_value, numeric_value from public.config where key='pedido_categories';

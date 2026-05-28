@@ -1,0 +1,27 @@
+Added src/pages/AdminPromoToday.tsx
+AdminPedidoSettings.tsx: added keys for pedido enabled/disabled msg
+AdminPedidoSettings.tsx: added state pedidoEnabled/pedidoDisabledMessage
+CustomerOrder.tsx: added pedidoEnabled states
+CustomerOrder.tsx: submit blocked when pedidos disabled
+CustomerOrder.tsx: added banner when pedidos disabled
+Promo.tsx: imported listActivePromotions
+Promo.tsx: added dbPromos state
+Promo.tsx: added todayTitle/featuredSlug/todayImageOverride
+Promo.tsx: added featuredPromo selector
+Promo.tsx: priceText uses featuredPromo
+Promo.tsx: detailText uses featuredPromo
+Promo.tsx: ctaLabel uses featuredPromo
+Promo.tsx: ctaCode uses featuredPromo
+Promo.tsx: added heroImgUnified
+Promo.tsx: inserted hero image block in featured card
+Promo.tsx: added promosUnified to prefer dbPromos
+Promos.tsx: imported config cache
+Promos.tsx: added cfg state
+Promos.tsx: now refreshes config cache
+Promos.tsx: added featured promo showcase
+Promos.tsx: inserted featured section UI
+admin.tsx: imported AdminPromoToday
+admin.tsx: added promo-hoy tab
+admin.tsx: labeled promo-hoy tab
+admin.tsx: renders AdminPromoToday
+admin.tsx: added unification banner in promo tab

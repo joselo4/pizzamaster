@@ -1,0 +1,4 @@
+-- Nota de zona horaria (no altera esquema)
+-- Postgres timestamptz almacena instantes en UTC; para ver hora Perú:
+--   SET TIME ZONE 'America/Lima';
+--   SELECT created_at AT TIME ZONE 'America/Lima' as created_at_lima FROM public.movements;

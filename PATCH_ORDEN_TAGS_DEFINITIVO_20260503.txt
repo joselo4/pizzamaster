@@ -1,0 +1,6 @@
+Parche definitivo orden de tags:
+- Admin > Productos: arrastrar tags ahora auto-guarda al soltar.
+- Botón Guardar orden guarda primero pedido_categories, luego productos.
+- /pedido lee pedido_categories desde Supabase y respeta ese orden exacto como prioridad.
+- Si hay productos con categorías no incluidas, aparecen al final para no ocultarlos.
+- Se incluye SQL 34_debug_pedido_categories.sql para verificar/forzar el orden en Supabase.
